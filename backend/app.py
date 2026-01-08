@@ -2,22 +2,26 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import psycopg2
 import os
-import subprocess   
-import sys          
-import pickle       
+import subprocess
+import sys
+import pickle
 
 app = Flask(__name__)
 CORS(app)
 
+# ---------- PATH CONFIG (IMPORTANT) ----------
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ML_DIR = os.path.abspath(os.path.join(BASE_DIR, "../ml"))
+# --------------------------------------------
+
 # ---------- POSTGRES CONFIG ----------
-conn =psycopg2.connect(
+conn = psycopg2.connect(
     dbname="smart_transport",
     user="arjunpmanoj",
     host="localhost"
 )
 conn.autocommit = True
 cursor = conn.cursor()
-
 # ------------------------------------
 
 @app.route("/")
@@ -25,17 +29,17 @@ def home():
     return jsonify({"message": "Backend running"})
 
 
-# 🔹 STEP 1: USER REGISTRATION APIimport subprocess
+# 🔹 USER REGISTRATION
 @app.route("/register-user", methods=["POST"])
 def register_user():
-    data = request.json
+    data = request.json or {}
     name = data.get("name")
     contact = data.get("contact")
 
     if not name:
         return jsonify({"error": "Name is required"}), 400
 
-    # ---------------- CHECK USER ----------------
+    # ---------- CHECK / CREATE USER ----------
     cursor.execute(
         "SELECT user_id FROM users WHERE name=%s",
         (name,)
@@ -59,29 +63,34 @@ def register_user():
             (user_id, 100.00)
         )
 
-    # ---------------- CAPTURE FACE ----------------
+    # ---------- FACE CAPTURE ----------
     result = subprocess.run(
         [sys.executable, "face_encode.py"],
-        cwd=os.path.join(os.getcwd(), "../ml"),
-        capture_output=True
+        cwd=ML_DIR,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
     )
 
     if result.returncode != 0 or not result.stdout:
+        print("Face encode error:", result.stderr.decode())
         conn.rollback()
         return jsonify({"error": "Face capture failed"}), 500
 
-    embedding = pickle.loads(result.stdout)
+    try:
+        embedding = pickle.loads(result.stdout)
+    except Exception as e:
+        print("Pickle load error:", e)
+        conn.rollback()
+        return jsonify({"error": "Invalid face data"}), 500
 
-    embedding = pickle.loads(result.stdout)
-
-    if embedding is None or embedding.size == 0:
+    if embedding is None:
         conn.rollback()
         return jsonify({"error": "No face detected"}), 400
 
-    # Convert numpy → Python list
+    # numpy → list (Postgres compatible)
     embedding = embedding.tolist()
 
-    # ---------------- STORE / UPDATE FACE ----------------
+    # ---------- STORE / UPDATE FACE ----------
     cursor.execute(
         "SELECT face_id FROM face_database WHERE user_id=%s",
         (user_id,)
@@ -101,7 +110,6 @@ def register_user():
         )
         face_action = "stored"
 
-    # ✅ COMMIT IS MANDATORY
     conn.commit()
 
     return jsonify({
@@ -111,14 +119,24 @@ def register_user():
         "face_action": face_action
     })
 
+
+# 🔹 FACE LOGIN
 @app.route("/face-login", methods=["POST"])
 def face_login():
     result = subprocess.run(
-    [sys.executable, "face_verify.py"],
-    cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "../ml")),
-    capture_output=True,
-    text=True
-)
+        [sys.executable, "face_verify.py"],
+        cwd=ML_DIR,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+
+    if result.returncode != 0:
+        print("Face verify error:", result.stderr)
+        return jsonify({
+            "success": False,
+            "message": "Face verification failed"
+        }), 500
 
     output = result.stdout.strip()
 
@@ -132,6 +150,7 @@ def face_login():
         "success": False,
         "message": "Face not recognized"
     }), 401
+
 
 if __name__ == "__main__":
     app.run(debug=True)

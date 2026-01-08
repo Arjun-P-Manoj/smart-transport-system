@@ -6,7 +6,8 @@ import pickle
 
 MAX_SAMPLES = 5
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)
+
 encodings = []
 count = 0
 
