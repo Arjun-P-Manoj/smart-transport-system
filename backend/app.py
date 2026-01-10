@@ -11,13 +11,16 @@ from dotenv import load_dotenv
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# ---------------- LOAD ENV ----------------
 load_dotenv()
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
-CORS(app)
 
-# ---------- DB ----------
+# ✅ Proper CORS (includes OPTIONS)
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+# ---------------- DB ----------------
 def get_db_connection():
     return psycopg2.connect(
         dbname=os.getenv("DB_NAME"),
@@ -25,17 +28,22 @@ def get_db_connection():
         host=os.getenv("DB_HOST")
     )
 
+# Global connection (read-only usage)
 conn = get_db_connection()
 conn.autocommit = True
 cursor = conn.cursor()
-# ------------------------
 
-# ---------- ML PATH ----------
+# ---------------- ML PATH ----------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ML_DIR = os.path.abspath(os.path.join(BASE_DIR, "../ml"))
-# ----------------------------
 
-# ---------- JWT MIDDLEWARE ----------
+# ---------------- OPTIONS HANDLER ----------------
+@app.before_request
+def handle_options():
+    if request.method == "OPTIONS":
+        return "", 200
+
+# ---------------- JWT MIDDLEWARE ----------------
 def token_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -52,19 +60,18 @@ def token_required(f):
             request.user = data
         except Exception:
             return jsonify({"error": "Invalid token"}), 401
-
         return f(*args, **kwargs)
     return wrapper
-# ----------------------------------
 
-
+# ---------------- HOME ----------------
 @app.route("/")
 def home():
     return jsonify({"message": "Backend running"})
 
-
-# 🔹 REGISTER USER + FACE (SAME FLOW)
-@app.route("/register", methods=["POST"])
+# =================================================
+# 🔹 REGISTER USER + FACE (ATOMIC / SAFE)
+# =================================================
+@app.route("/register", methods=["POST", "OPTIONS"])
 def register():
     data = request.json or {}
     name = data.get("name")
@@ -74,29 +81,18 @@ def register():
     if not all([name, mobile, password]):
         return jsonify({"error": "All fields required"}), 400
 
-    # ✅ FIX: force pbkdf2 to avoid scrypt error
     password_hash = generate_password_hash(
         password,
         method="pbkdf2:sha256"
     )
 
+    # 🔑 Transaction-based connection
+    conn = get_db_connection()
+    conn.autocommit = False
+    cur = conn.cursor()
+
     try:
-        # 1️⃣ Create user
-        cursor.execute("""
-            INSERT INTO users (name, mobile, password_hash)
-            VALUES (%s, %s, %s)
-            RETURNING user_id
-        """, (name, mobile, password_hash))
-
-        user_id = cursor.fetchone()[0]
-
-        # 2️⃣ Create wallet
-        cursor.execute(
-            "INSERT INTO wallet (user_id, balance) VALUES (%s, %s)",
-            (user_id, 100.0)
-        )
-
-        # 3️⃣ Face capture
+        # 1️⃣ Capture face FIRST
         result = subprocess.run(
             [sys.executable, "face_encode.py"],
             cwd=ML_DIR,
@@ -105,19 +101,30 @@ def register():
         )
 
         if result.returncode != 0 or not result.stdout:
-            conn.rollback()
-            return jsonify({"error": "Face capture failed"}), 500
+            raise Exception("Face capture failed")
 
         embedding = pickle.loads(result.stdout)
-
         if embedding is None:
-            conn.rollback()
-            return jsonify({"error": "No face detected"}), 400
+            raise Exception("No face detected")
 
         embedding = embedding.tolist()
 
+        # 2️⃣ Create user
+        cur.execute("""
+            INSERT INTO users (name, mobile, password_hash)
+            VALUES (%s, %s, %s)
+            RETURNING user_id
+        """, (name, mobile, password_hash))
+        user_id = cur.fetchone()[0]
+
+        # 3️⃣ Create wallet
+        cur.execute("""
+            INSERT INTO wallet (user_id, balance)
+            VALUES (%s, %s)
+        """, (user_id, 100.0))
+
         # 4️⃣ Store face
-        cursor.execute("""
+        cur.execute("""
             INSERT INTO face_database (user_id, embedding)
             VALUES (%s, %s)
         """, (user_id, embedding))
@@ -131,10 +138,15 @@ def register():
 
     except Exception as e:
         conn.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e)}), 400
 
+    finally:
+        cur.close()
+        conn.close()
 
+# =================================================
 # 🔹 LOGIN (MOBILE + PASSWORD)
+# =================================================
 @app.route("/login", methods=["POST"])
 def login():
     data = request.json or {}
@@ -148,8 +160,8 @@ def login():
         SELECT user_id, name, password_hash
         FROM users WHERE mobile=%s
     """, (mobile,))
-
     user = cursor.fetchone()
+
     if not user:
         return jsonify({"error": "Invalid credentials"}), 401
 
@@ -173,8 +185,9 @@ def login():
         }
     })
 
-
+# =================================================
 # 🔹 FACE LOGIN (ENTRY GATE)
+# =================================================
 @app.route("/face-login", methods=["POST"])
 def face_login():
     result = subprocess.run(
@@ -190,8 +203,9 @@ def face_login():
 
     return jsonify({"success": False, "message": "Face not recognized"}), 401
 
-
+# =================================================
 # 🔹 JOURNEY ENTRY
+# =================================================
 @app.route("/api/entry", methods=["POST"])
 @token_required
 def entry_journey():
@@ -214,12 +228,13 @@ def entry_journey():
     cur.execute("""
         INSERT INTO journey (user_id, entry_time, entry_gps, status)
         VALUES (%s, NOW(), %s, 'IN_PROGRESS')
-    """ , (user_id, entry_gps))
+    """, (user_id, entry_gps))
 
     return jsonify({"message": "Journey started"}), 201
 
-
+# =================================================
 # 🔹 DASHBOARD
+# =================================================
 @app.route("/dashboard", methods=["GET"])
 @token_required
 def dashboard():
@@ -251,6 +266,6 @@ def dashboard():
         "face_registered": face_registered
     })
 
-
+# ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(debug=True)
