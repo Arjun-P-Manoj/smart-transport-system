@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+import { Link } from "react-router-dom";
 
 export default function Home() {
   return (
@@ -17,7 +17,8 @@ export default function Home() {
         </h2>
 
         <p className="text-gray-400 mb-10">
-          Facial-recognition based public transport system for automated fare deduction.
+          Facial-recognition based public transport system for automated fare
+          deduction.
         </p>
 
         <div className="flex justify-center gap-4">
@@ -29,11 +30,17 @@ export default function Home() {
 
           <Link to="/login">
             <button className="px-6 py-3 rounded-full border border-gray-600">
+              Login
+            </button>
+          </Link>
+
+          <Link to="/facelogin">
+            <button className="px-6 py-3 rounded-full border border-gray-600">
               Face Login
             </button>
           </Link>
         </div>
       </div>
     </div>
-  )
+  );
 }
