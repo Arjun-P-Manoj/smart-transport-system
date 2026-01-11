@@ -266,6 +266,54 @@ def dashboard():
         "face_registered": face_registered
     })
 
+# =================================================
+# 🔹 RE-REGISTER FACE (SECURE)
+# =================================================
+@app.route("/re-register-face", methods=["POST"])
+@token_required
+def re_register_face():
+    user_id = request.user["user_id"]
+
+    try:
+        # 1️⃣ Capture new face
+        result = subprocess.run(
+            [sys.executable, "face_encode.py"],
+            cwd=ML_DIR,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+
+        if result.returncode != 0 or not result.stdout:
+            return jsonify({"error": "Face capture failed"}), 400
+
+        embedding = pickle.loads(result.stdout)
+        if embedding is None:
+            return jsonify({"error": "No face detected"}), 400
+
+        embedding = embedding.tolist()
+
+        # 2️⃣ Update face embedding
+        cursor.execute("""
+            UPDATE face_database
+            SET embedding=%s
+            WHERE user_id=%s
+        """, (embedding, user_id))
+
+        # 3️⃣ If face not exists (safety fallback)
+        if cursor.rowcount == 0:
+            cursor.execute("""
+                INSERT INTO face_database (user_id, embedding)
+                VALUES (%s, %s)
+            """, (user_id, embedding))
+
+        return jsonify({
+            "success": True,
+            "message": "Face re-registered successfully"
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(debug=True)

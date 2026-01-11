@@ -25,6 +25,35 @@ export default function Dashboard() {
   const [rechargeAmount, setRechargeAmount] = useState("");
   const [showFaceModal, setShowFaceModal] = useState(false);
 
+  const handleReRegisterFace = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await fetch("http://127.0.0.1:5000/re-register-face", {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        alert(result.error || "Face update failed");
+        return;
+      }
+
+      alert("Face updated successfully ✅");
+      setShowFaceModal(false);
+
+      // Refresh dashboard state
+      setData((prev) => (prev ? { ...prev, face_registered: true } : prev));
+    } catch {
+      alert("Server error");
+    }
+  };
+
   /* ---------------- DUMMY DATA ---------------- */
   const journeys: Journey[] = [
     {
@@ -110,7 +139,7 @@ export default function Dashboard() {
             active={activeTab === "wallet"}
             onClick={() => setActiveTab("wallet")}
           />
-          <NavItem label="Face Login" onClick={() => navigate("/face-login")} />
+          <NavItem label="Face Login" onClick={() => navigate("/facelogin")} />
         </nav>
 
         <button
@@ -321,7 +350,10 @@ export default function Dashboard() {
             </p>
             <div className="flex justify-end gap-4">
               <button onClick={() => setShowFaceModal(false)}>Cancel</button>
-              <button className="bg-indigo-600 px-4 py-2 rounded-lg">
+              <button
+                onClick={handleReRegisterFace}
+                className="bg-indigo-600 px-4 py-2 rounded-lg"
+              >
                 Start Capture
               </button>
             </div>
