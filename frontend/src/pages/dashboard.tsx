@@ -16,7 +16,7 @@ type Journey = {
 };
 
 export default function Dashboard() {
-  const navigate = useNavigate();
+  const navigate = useNavigate();``
   const [activeTab, setActiveTab] = useState<
     "dashboard" | "journey" | "wallet"
   >("dashboard");
@@ -24,10 +24,15 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [rechargeAmount, setRechargeAmount] = useState("");
   const [showFaceModal, setShowFaceModal] = useState(false);
+  const [faceLoading, setFaceLoading] = useState(false);
 
   const handleReRegisterFace = async () => {
+    if (faceLoading) return; // 🔒 HARD GUARD (prevents double click)
+
     const token = localStorage.getItem("token");
     if (!token) return;
+
+    setFaceLoading(true); // 🔒 LOCK BUTTON IMMEDIATELY
 
     try {
       const res = await fetch("http://127.0.0.1:5000/re-register-face", {
@@ -51,6 +56,8 @@ export default function Dashboard() {
       setData((prev) => (prev ? { ...prev, face_registered: true } : prev));
     } catch {
       alert("Server error");
+    } finally {
+      setFaceLoading(false); // 🔓 UNLOCK AFTER REQUEST COMPLETES
     }
   };
 
@@ -77,7 +84,7 @@ export default function Dashboard() {
   const filteredJourneys = journeys.filter((j) =>
     `${j.bus} ${j.source} ${j.destination}`
       .toLowerCase()
-      .includes(search.toLowerCase())
+      .includes(search.toLowerCase()),
   );
 
   /* ---------------- FETCH DASHBOARD ---------------- */
@@ -139,7 +146,6 @@ export default function Dashboard() {
             active={activeTab === "wallet"}
             onClick={() => setActiveTab("wallet")}
           />
-          <NavItem label="Face Login" onClick={() => navigate("/facelogin")} />
         </nav>
 
         <button
@@ -352,9 +358,14 @@ export default function Dashboard() {
               <button onClick={() => setShowFaceModal(false)}>Cancel</button>
               <button
                 onClick={handleReRegisterFace}
-                className="bg-indigo-600 px-4 py-2 rounded-lg"
+                disabled={faceLoading}
+                className={`px-4 py-2 rounded-lg ${
+                  faceLoading
+                    ? "bg-indigo-400 opacity-60 cursor-not-allowed"
+                    : "bg-indigo-600"
+                }`}
               >
-                Start Capture
+                {faceLoading ? "Capturing Face..." : "Start Capture"}
               </button>
             </div>
           </div>
