@@ -238,25 +238,33 @@ def entry_journey():
 @app.route("/dashboard", methods=["GET"])
 @token_required
 def dashboard():
-    user_id = request.user["user_id"]
+    user_id = request.user.get("user_id")
 
-    cursor.execute(
+    cur = conn.cursor()
+
+    # --- USER ---
+    cur.execute(
         "SELECT name, mobile FROM users WHERE user_id=%s",
         (user_id,)
     )
-    user = cursor.fetchone()
+    user = cur.fetchone()
 
-    cursor.execute(
+    if user is None:
+        return jsonify({"error": "Invalid token / user not found"}), 401
+
+    # --- WALLET ---
+    cur.execute(
         "SELECT balance FROM wallet WHERE user_id=%s",
         (user_id,)
     )
-    wallet = cursor.fetchone()
+    wallet = cur.fetchone()
 
-    cursor.execute(
+    # --- FACE ---
+    cur.execute(
         "SELECT 1 FROM face_database WHERE user_id=%s",
         (user_id,)
     )
-    face_registered = cursor.fetchone() is not None
+    face_registered = cur.fetchone() is not None
 
     return jsonify({
         "user_id": user_id,
@@ -265,6 +273,7 @@ def dashboard():
         "wallet_balance": wallet[0] if wallet else 0,
         "face_registered": face_registered
     })
+
 
 # =================================================
 # 🔹 RE-REGISTER FACE (SECURE)
