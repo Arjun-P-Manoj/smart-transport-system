@@ -112,7 +112,7 @@ export default function DriverDashboard() {
             <div className="text-center">
               <p className="text-sm text-gray-400">Next Stop</p>
               <p className="text-xl font-bold text-yellow-400">
-                {nextStop ? nextStop.stop_name : "NoFurthurStop"}
+                {nextStop ? nextStop.stop_name : "No Furthur Stops"}
               </p>
             </div>
           </div>
