@@ -35,7 +35,7 @@ export default function Dashboard() {
     setFaceLoading(true); // 🔒 LOCK BUTTON IMMEDIATELY
 
     try {
-      const res = await fetch("http://127.0.0.1:5000/re-register-face", {
+      const res = await fetch("http://127.0.0.1:5050/re-register-face", {
         method: "POST",
         headers: {
           Authorization: "Bearer " + token,
@@ -97,7 +97,7 @@ export default function Dashboard() {
 
     const fetchDashboard = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:5000/dashboard", {
+        const res = await fetch("http://127.0.0.1:5050/dashboard", {
           headers: {
             Authorization: "Bearer " + token,
           },
