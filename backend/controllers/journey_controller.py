@@ -1,25 +1,51 @@
-from flask import jsonify, request
+from flask import jsonify
+from psycopg2.extras import RealDictCursor
 from db.database import get_db_connection
 
-def start_journey(user_id):
-    entry_gps = request.json.get("entry_gps")
-    if not entry_gps:
-        return jsonify({"error": "entry_gps required"}), 400
 
+def start_journey(user_id):
     conn = get_db_connection()
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT 1 FROM journey
-        WHERE user_id=%s AND status='IN_PROGRESS'
+        INSERT INTO journey (user_id, entry_time, status)
+        VALUES (%s, NOW(), 'IN_PROGRESS')
+        RETURNING journey_id;
     """, (user_id,))
 
-    if cur.fetchone():
-        return jsonify({"error": "Active journey exists"}), 409
+    journey_id = cur.fetchone()[0]
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify({
+        "message": "Journey started",
+        "journey_id": journey_id
+    })
+
+
+def get_bus_route(bus_id):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
 
     cur.execute("""
-        INSERT INTO journey (user_id, entry_time, entry_gps, status)
-        VALUES (%s, NOW(), %s, 'IN_PROGRESS')
-    """, (user_id, entry_gps))
+        SELECT
+            rs.stop_id,
+            rs.stop_name,
+            CASE
+                WHEN rs.stop_id = b.current_stop_id THEN true
+                ELSE false
+            END AS is_current
+        FROM bus b
+        JOIN route_stops rs ON rs.route_id = b.route_id
+        WHERE b.bus_id = %s
+        ORDER BY
+            CASE WHEN b.direction = 'UP' THEN rs.stop_order END ASC,
+            CASE WHEN b.direction = 'DOWN' THEN rs.stop_order END DESC;
+    """, (bus_id,))
 
-    return jsonify({"message": "Journey started"}), 201
+    stops = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return jsonify(stops)
