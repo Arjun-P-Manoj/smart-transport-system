@@ -6,6 +6,7 @@ from routes.auth_routes import auth_bp
 from routes.face_routes import face_bp
 from routes.journey_routes import journey_bp
 from routes.driver_routes import driver_bp
+from routes.passenger_routes import passenger_bp
 
 
 app = Flask(__name__)
@@ -17,6 +18,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(face_bp)
 app.register_blueprint(journey_bp)
 app.register_blueprint(driver_bp, url_prefix="/api")
+app.register_blueprint(passenger_bp, url_prefix="/api")
 
 
 @app.route("/")

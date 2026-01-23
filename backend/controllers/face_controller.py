@@ -18,9 +18,29 @@ def register_face(user_id):
     """, (user_id, embedding.tolist()))
 
     return jsonify({"message": "Face registered"})
-
 def face_login():
     result = verify_face()
-    if "ACCESS GRANTED" in result:
-        return jsonify({"success": True, "message": result})
+
+    if result and "USER_ID:" in result:
+        user_id = int(result.split("USER_ID:")[1].strip())
+
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        cur.execute(
+            "SELECT name FROM users WHERE user_id = %s",
+            (user_id,)
+        )
+        row = cur.fetchone()
+
+        cur.close()
+        conn.close()
+
+        if row:
+            return jsonify({
+                "success": True,
+                "message": f"Welcome {row[0]}"
+            })
+
     return jsonify({"success": False}), 401

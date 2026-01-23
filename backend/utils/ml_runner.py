@@ -26,3 +26,24 @@ def verify_face():
         text=True
     )
     return result.stdout
+
+def recognize_face():
+    """
+    Wrapper used by backend controllers.
+    Runs face_verify.py and returns user_id (int) or None.
+    """
+    output = verify_face()
+
+    if not output:
+        return None
+
+    # IMPORTANT: handle multi-line output
+    for line in output.splitlines():
+        line = line.strip()
+        if line.startswith("USER_ID:"):
+            try:
+                return int(line.split(":")[1])
+            except ValueError:
+                return None
+
+    return None

@@ -42,8 +42,9 @@ if len(known_encodings) == 0:
 known_encodings = np.array(known_encodings)
 
 # ---------------- CONFIG ----------------
-TIME_LIMIT = 5
-DISTANCE_THRESHOLD = 0.65   # ✅ FIXED
+TIME_LIMIT = 3
+DISTANCE_THRESHOLD = 0.45
+# ✅ FIXED
 FRAME_SKIP = 5
 # ---------------------------------------
 
@@ -96,6 +97,8 @@ while time.time() - start_time < TIME_LIMIT:
         matched_name = known_names[best_match_index]
         authenticated = True
         break
+
+
     else:
         cv2.putText(
             frame,
@@ -117,6 +120,25 @@ cv2.destroyAllWindows()
 
 # ---------------- RESULT ----------------
 if authenticated:
-    print(f"[ACCESS GRANTED] Welcome {matched_name}")
+    conn = psycopg2.connect(
+        dbname="smart_transport",
+        user="arjunpmanoj",
+        host="localhost"
+    )
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT user_id FROM users WHERE name = %s",
+        (matched_name,)
+    )
+    row = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    if row:
+        print(f"USER_ID:{row[0]}")
+    else:
+        print("NO_MATCH")
 else:
-    print("[ACCESS DENIED] Verification failed or timed out")
+    print("NO_MATCH")

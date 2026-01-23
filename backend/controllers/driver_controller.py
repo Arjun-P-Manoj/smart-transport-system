@@ -16,7 +16,8 @@ def get_all_buses():
             b.bus_number,
             b.number_plate,
             r.route_name,
-            rs.stop_name AS current_stop
+            rs.stop_name AS current_stop,
+            rs.distance_km AS current_distance_km
         FROM bus b
         JOIN route r ON b.route_id = r.route_id
         LEFT JOIN route_stops rs ON b.current_stop_id = rs.stop_id;
@@ -27,6 +28,7 @@ def get_all_buses():
     conn.close()
 
     return jsonify(buses)
+
 
 
 # =========================
