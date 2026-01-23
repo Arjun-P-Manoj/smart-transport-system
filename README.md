@@ -25,7 +25,7 @@ Users register once with their face and personal details. During travel, authent
 ## 🧠 Key Features
 
 ### 🔐 User Registration
-- User enters basic details (name, contact)
+- User enters basic details (name, contact, password)
 - Face is captured using webcam
 - Facial embeddings are generated and stored in database
 
@@ -38,6 +38,16 @@ Users register once with their face and personal details. During travel, authent
 - Each user has a wallet
 - Initial balance is auto-created on registration
 - Can be extended for automated fare deduction
+
+### 🚗 Driver Dashboard
+- Drivers can view bus routes and current stops
+- Manage bus movement along routes
+- Real-time route direction control
+
+### 🛣️ Journey Management
+- Users can start and track journeys
+- View bus routes and stops
+- Journey status tracking
 
 ### 🧩 Modular Architecture
 - Frontend, backend, ML, and database layers are clearly separated
@@ -74,25 +84,54 @@ smart-transport-system/
 │
 ├── backend/
 │   ├── app.py                # Flask backend APIs
+│   ├── config/
+│   │   ├── __init__.py
+│   │   └── config.py         # Configuration settings
+│   ├── controllers/
+│   │   ├── __init__.py
+│   │   ├── auth_controller.py
+│   │   ├── driver_controller.py
+│   │   ├── face_controller.py
+│   │   └── journey_controller.py
+│   ├── db/
+│   │   ├── __init__.py
+│   │   └── database.py        # Database connection and models
+│   ├── middleware/
+│   │   ├── __init__.py
+│   │   └── auth.py            # Authentication middleware
+│   ├── ml/
+│   │   ├── face_encode.py    # Face registration logic
+│   │   └── face_verify.py    # Face verification logic
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   ├── auth_routes.py
+│   │   ├── driver_routes.py
+│   │   ├── face_routes.py
+│   │   └── journey_routes.py
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   └── ml_runner.py       # ML utility functions
 │   └── requirements.txt
 │
-├── ml/
-│   ├── face_encode.py        # Face registration logic
-│   └── face_verify.py        # Face verification logic
-│
 ├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── Home.jsx
-│   │   │   ├── Register.jsx
-│   │   │   └── Login.jsx
-│   │   ├── App.jsx
-│   │   └── main.jsx
+│   ├── eslint.config.js
 │   ├── index.html
-│   └── package.json
-│
-├── database/
-│   └── schema.sql            # Database schema
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── public/
+│   └── src/
+│       ├── App.css
+│       ├── App.jsx
+│       ├── index.css
+│       ├── main.jsx
+│       ├── assets/
+│       └── pages/
+│           ├── dashboard.tsx
+│           ├── DriverDashboard.jsx
+│           ├── FaceLogin.jsx
+│           ├── Home.jsx
+│           ├── Login.jsx
+│           └── Register.jsx
 │
 ├── .gitignore
 └── README.md
@@ -110,8 +149,8 @@ Stores user personal details.
 ```
 user_id (PK)
 name
-contact
-created_at
+mobile
+password_hash
 ```
 
 #### `face_database`
@@ -121,7 +160,6 @@ Stores facial embeddings linked to users.
 face_id (PK)
 user_id (FK)
 embedding (FLOAT[])
-created_at
 ```
 
 #### `wallet`
@@ -131,6 +169,46 @@ Stores user wallet balance.
 wallet_id (PK)
 user_id (FK)
 balance
+```
+
+#### `bus`
+Stores bus information.
+
+```
+bus_id (PK)
+bus_number
+number_plate
+route_id (FK)
+current_stop_id (FK)
+direction
+```
+
+#### `route`
+Stores route details.
+
+```
+route_id (PK)
+route_name
+```
+
+#### `route_stops`
+Stores stops along routes.
+
+```
+stop_id (PK)
+route_id (FK)
+stop_name
+stop_order
+```
+
+#### `journey`
+Stores user journey records.
+
+```
+journey_id (PK)
+user_id (FK)
+entry_time
+status
 ```
 
 ---
