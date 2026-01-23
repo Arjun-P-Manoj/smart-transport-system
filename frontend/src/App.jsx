@@ -1,9 +1,9 @@
-import { Routes, Route } from "react-router-dom"
-import Home from "./pages/Home"
-import Register from "./pages/Register"
-import FaceLogin from "./pages/FaceLogin"
-import Login from "./pages/Login"
-import Dashboard from "./pages/dashboard"
+import { Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import Register from "./pages/Register";
+import FaceLogin from "./pages/FaceLogin";
+import Login from "./pages/Login";
+import Dashboard from "./pages/dashboard";
 import DriverDashboard from "./pages/DriverDashboard";
 
 export default function App() {
@@ -16,5 +16,5 @@ export default function App() {
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/driver" element={<DriverDashboard />} />
     </Routes>
-  )
+  );
 }
