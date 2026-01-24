@@ -88,7 +88,7 @@ export default function DriverDashboard() {
         <div className="flex justify-center mb-8">
           <div className="relative w-80">
             <select
-              className="w-full appearance-none bg-gradient-to-r from-gray-900 to-black
+              className="w-full appearance-none bg-linear-to-r from-gray-900 to-black
                 border border-gray-700 rounded-full px-6 py-3 text-white font-medium
                 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               onChange={(e) => {

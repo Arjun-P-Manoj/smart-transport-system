@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import { toast } from "react-toastify";
 
 export default function PassengerBus() {
   const { busId } = useParams();
   const [data, setData] = useState(null);
 
-  // 🔹 NEW STATES (logic only)
-  const [insideBus, setInsideBus] = useState(false);
+  // 🔹 ONLY loading state (no insideBus state)
   const [loading, setLoading] = useState(false);
 
   const currentStopRef = useRef(null);
@@ -57,20 +57,23 @@ export default function PassengerBus() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ bus_id: Number(busId) }),
-        }
+        },
       );
 
       const result = await res.json();
 
       if (result.success) {
-        setInsideBus(true); // 🔒 lock entry, enable exit
-        alert("Passenger entered bus");
+        if (result.message?.toLowerCase().includes("already")) {
+          toast.info(result.message);
+        } else {
+          toast.success(result.message);
+        }
       } else {
-        alert(result.message || "Face entry failed");
+        toast.error(result.message || "Face entry failed");
       }
     } catch (err) {
       console.error(err);
-      alert("Face entry error");
+      toast.error("Face entry error");
     } finally {
       setLoading(false);
     }
@@ -81,26 +84,22 @@ export default function PassengerBus() {
     try {
       setLoading(true);
 
-      const res = await fetch(
-        "http://127.0.0.1:5050/api/passenger/face-exit",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bus_id: Number(busId) }),
-        }
-      );
+      const res = await fetch("http://127.0.0.1:5050/api/passenger/face-exit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bus_id: Number(busId) }),
+      });
 
       const result = await res.json();
 
       if (result.success) {
-        setInsideBus(false); // 🔓 unlock entry
-        alert("Passenger exited bus");
+        toast.success(result.message);
       } else {
-        alert(result.message || "Face exit failed");
+        toast.warning(result.message || "Face exit failed");
       }
     } catch (err) {
       console.error(err);
-      alert("Face exit error");
+      toast.error("Face exit error");
     } finally {
       setLoading(false);
     }
@@ -108,7 +107,6 @@ export default function PassengerBus() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
-
       {/* ================= HERO / JOURNEY INFO ================= */}
       <div className="px-8 pt-20 pb-16 text-center">
         <p className="text-xs tracking-widest text-gray-400">
@@ -130,7 +128,6 @@ export default function PassengerBus() {
       {/* ================= BUS INFO STRIP ================= */}
       <div className="px-6">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-
           <div className="bg-black border border-blue-500/30 rounded-2xl px-6 py-5 text-center">
             <p className="text-xs uppercase text-blue-400 tracking-wide">Bus</p>
             <p className="text-xl font-semibold text-blue-300">
@@ -138,8 +135,10 @@ export default function PassengerBus() {
             </p>
           </div>
 
-          <div className="bg-black border border-green-500/40 rounded-2xl px-6 py-5 text-center
-            shadow-[0_0_20px_rgba(74,222,128,0.15)]">
+          <div
+            className="bg-black border border-green-500/40 rounded-2xl px-6 py-5 text-center
+            shadow-[0_0_20px_rgba(74,222,128,0.15)]"
+          >
             <p className="text-xs uppercase text-green-400 tracking-wide">
               Current Stop
             </p>
@@ -181,8 +180,8 @@ export default function PassengerBus() {
                           stop.is_current
                             ? "bg-green-400 ring-8 ring-green-300 animate-pulse text-black"
                             : isNext
-                            ? "bg-yellow-400 ring-4 ring-yellow-300 text-black"
-                            : "bg-gray-600"
+                              ? "bg-yellow-400 ring-4 ring-yellow-300 text-black"
+                              : "bg-gray-600"
                         }
                       `}
                     >
@@ -195,8 +194,8 @@ export default function PassengerBus() {
                           stop.is_current
                             ? "text-green-400 font-semibold"
                             : isNext
-                            ? "text-yellow-400 font-semibold"
-                            : "text-gray-400"
+                              ? "text-yellow-400 font-semibold"
+                              : "text-gray-400"
                         }
                       `}
                     >
@@ -236,31 +235,29 @@ export default function PassengerBus() {
       {/* ================= ACTIONS ================= */}
       <div className="mt-auto px-8 py-10">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-
           <button
             onClick={handleFaceEntry}
-            disabled={insideBus || loading}
+            disabled={loading}
             className="bg-green-400/20 text-green-300
               border border-green-400/30
               px-12 py-4 rounded-full font-medium
               hover:bg-green-400/30 transition
               disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {loading && !insideBus ? "Scanning..." : "Face Entry"}
+            {loading ? "Scanning..." : "Face Entry"}
           </button>
 
           <button
             onClick={handleFaceExit}
-            disabled={!insideBus || loading}
+            disabled={loading}
             className="bg-gray-500/20 text-gray-300
               border border-gray-500/30
               px-12 py-4 rounded-full font-medium
               hover:bg-gray-500/30 transition
               disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {loading && insideBus ? "Scanning..." : "Face Exit"}
+            {loading ? "Scanning..." : "Face Exit"}
           </button>
-
         </div>
       </div>
     </div>

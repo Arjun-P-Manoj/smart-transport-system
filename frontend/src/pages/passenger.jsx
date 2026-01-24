@@ -23,7 +23,7 @@ export default function PassengerHome() {
 
       {/* 🔥 HERO SECTION */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black"></div>
+        <div className="absolute inset-0 bg-linear-to-b from-black/70 via-black/40 to-black"></div>
 
         <div className="relative px-6 pt-20 pb-24 max-w-6xl mx-auto text-center">
           <p className="text-sm text-gray-400 tracking-wide">
@@ -64,7 +64,7 @@ export default function PassengerHome() {
               <div
                 key={bus.bus_id}
                 onClick={() => navigate(`/passenger/bus/${bus.bus_id}`)}
-                className="cursor-pointer bg-gradient-to-r from-gray-900 to-black
+                className="cursor-pointer bg-linear-to-r from-gray-900 to-black
                 border border-gray-800 rounded-2xl px-6 py-5
                 hover:border-green-400 transition"
               >
