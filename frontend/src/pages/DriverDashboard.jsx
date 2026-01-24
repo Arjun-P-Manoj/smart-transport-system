@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function DriverDashboard() {
   const [buses, setBuses] = useState([]);
   const [selectedBus, setSelectedBus] = useState(null);
   const [route, setRoute] = useState([]);
   const [status, setStatus] = useState("");
+
+  // 🔹 REF FOR AUTO-SCROLL
+  const currentStopRef = useRef(null);
 
   // Fetch buses
   useEffect(() => {
@@ -56,6 +59,17 @@ export default function DriverDashboard() {
       : null;
 
   const isLastStop = currentIndex === route.length - 1;
+
+  // 🔹 AUTO-SCROLL TO CURRENT STOP
+  useEffect(() => {
+    if (currentStopRef.current) {
+      currentStopRef.current.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  }, [currentIndex]);
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center px-6">
@@ -112,7 +126,7 @@ export default function DriverDashboard() {
             <div className="text-center">
               <p className="text-sm text-gray-400">Next Stop</p>
               <p className="text-xl font-bold text-yellow-400">
-                {nextStop ? nextStop.stop_name : "No Furthur Stops"}
+                {nextStop ? nextStop.stop_name : "No Further Stops"}
               </p>
             </div>
           </div>
@@ -126,8 +140,14 @@ export default function DriverDashboard() {
                 const isNext = index === currentIndex + 1;
 
                 return (
-                  <div key={stop.stop_id} className="flex items-center">
-                    {index !== 0 && <div className="w-20 h-1 bg-gray-700"></div>}
+                  <div
+                    key={stop.stop_id}
+                    ref={stop.is_current ? currentStopRef : null}
+                    className="flex items-center"
+                  >
+                    {index !== 0 && (
+                      <div className="w-20 h-1 bg-gray-700"></div>
+                    )}
 
                     <div className="flex flex-col items-center">
                       <div

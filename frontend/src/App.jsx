@@ -5,6 +5,8 @@ import FaceLogin from "./pages/FaceLogin";
 import Login from "./pages/Login";
 import Dashboard from "./pages/dashboard";
 import DriverDashboard from "./pages/DriverDashboard";
+import PassengerSimulation from "./pages/passenger";
+import PassengerBusView from "./pages/passengerBus";
 
 export default function App() {
   return (
@@ -15,6 +17,8 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/driver" element={<DriverDashboard />} />
+      <Route path="/passenger" element={<PassengerSimulation />} />
+      <Route path="/passenger/bus/:busId" element={<PassengerBusView />} />
     </Routes>
   );
 }
