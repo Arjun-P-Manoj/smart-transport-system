@@ -8,6 +8,7 @@ from routes.journey_routes import journey_bp
 from routes.driver_routes import driver_bp
 from routes.passenger_routes import passenger_bp
 from routes.passenger_view_routes import passenger_view_bp
+from routes.wallet_routes import wallet_bp
 
 
 
@@ -22,6 +23,8 @@ app.register_blueprint(journey_bp)
 app.register_blueprint(driver_bp, url_prefix="/api")
 app.register_blueprint(passenger_bp, url_prefix="/api")
 app.register_blueprint(passenger_view_bp, url_prefix="/api")
+app.register_blueprint(wallet_bp, url_prefix="/api")
+
 
 
 

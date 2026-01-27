@@ -3,21 +3,13 @@ from db.database import get_db_connection
 from utils.ml_runner import recognize_face
 
 MIN_BALANCE = 50
+PRICE_PER_KM = 8
 
 
+# =========================
+# FACE PASSENGER ENTRY
+# =========================
 def face_passenger_entry():
-    """
-    Face-based passenger entry logic
-
-    Flow:
-    1. Face verification (registered or not)
-    2. Wallet balance check (>= 50)
-    3. Check if already inside bus
-    4. Get current stop from bus table
-    5. Insert journey entry
-    """
-
-    # 1️⃣ FACE VERIFICATION (registration check)
     user_id = recognize_face()
 
     if not user_id:
@@ -29,93 +21,247 @@ def face_passenger_entry():
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # 2️⃣ WALLET BALANCE CHECK
-    cur.execute(
-        "SELECT balance FROM wallet WHERE user_id = %s",
-        (user_id,)
-    )
-    wallet = cur.fetchone()
+    try:
+        # 🚫 BLOCK ENTRY IF PENDING DUE EXISTS
+        cur.execute("""
+            SELECT 1
+            FROM journey
+            WHERE user_id = %s
+              AND status = 'COMPLETED_WITH_DUE'
+        """, (user_id,))
 
-    if not wallet:
-        cur.close()
-        conn.close()
-        return jsonify({
-            "success": False,
-            "message": "Wallet not found. Please register."
-        }), 403
+        if cur.fetchone():
+            return jsonify({
+                "success": False,
+                "message": "Pending dues found. Please recharge wallet to continue."
+            }), 403
 
-    balance = float(wallet[0])
+        # WALLET CHECK
+        cur.execute("SELECT balance FROM wallet WHERE user_id = %s", (user_id,))
+        wallet = cur.fetchone()
 
-    if balance < MIN_BALANCE:
-        cur.close()
-        conn.close()
-        return jsonify({
-            "success": False,
-            "message": "Insufficient balance. Minimum ₹50 required"
-        }), 403
+        if not wallet:
+            return jsonify({
+                "success": False,
+                "message": "Wallet not found"
+            }), 403
 
-    # 3️⃣ CHECK IF PASSENGER IS ALREADY INSIDE BUS
-    cur.execute("""
-        SELECT journey_id
-        FROM journey
-        WHERE user_id = %s
-        AND exit_time IS NULL
-    """, (user_id,))
+        balance = float(wallet[0])
 
-    if cur.fetchone():
-        cur.close()
-        conn.close()
+        if balance < MIN_BALANCE:
+            return jsonify({
+                "success": False,
+                "message": "Minimum ₹50 balance required to start journey"
+            }), 403
+
+        # ALREADY INSIDE BUS
+        cur.execute("""
+            SELECT 1
+            FROM journey
+            WHERE user_id = %s
+              AND exit_time IS NULL
+        """, (user_id,))
+
+        if cur.fetchone():
+            return jsonify({
+                "success": True,
+                "message": "Passenger already inside bus"
+            })
+
+        bus_id = request.json.get("bus_id")
+
+        if not bus_id:
+            return jsonify({
+                "success": False,
+                "message": "bus_id is required"
+            }), 400
+
+        cur.execute("""
+            SELECT current_stop_id
+            FROM bus
+            WHERE bus_id = %s
+        """, (bus_id,))
+        row = cur.fetchone()
+
+        if not row or not row[0]:
+            return jsonify({
+                "success": False,
+                "message": "Current stop not available"
+            }), 400
+
+        entry_stop_id = row[0]
+
+        # INSERT JOURNEY
+        cur.execute("""
+            INSERT INTO journey (
+                user_id,
+                bus_id,
+                entry_stop_id,
+                entry_time,
+                status
+            )
+            VALUES (%s, %s, %s, NOW(), 'IN_PROGRESS')
+        """, (user_id, bus_id, entry_stop_id))
+
+        conn.commit()
+
         return jsonify({
             "success": True,
-            "message": "Passenger already inside bus"
+            "message": "Passenger entry recorded",
+            "entry_stop_id": entry_stop_id
         })
 
-    # 4️⃣ GET BUS CURRENT STOP
-    bus_id = request.json.get("bus_id")
-
-    if not bus_id:
-        cur.close()
-        conn.close()
+    except Exception as e:
+        conn.rollback()
         return jsonify({
             "success": False,
-            "message": "bus_id is required"
-        }), 400
+            "message": "Entry failed",
+            "error": str(e)
+        }), 500
 
-    cur.execute(
-        "SELECT current_stop_id FROM bus WHERE bus_id = %s",
-        (bus_id,)
-    )
-    row = cur.fetchone()
-
-    if not row or not row[0]:
+    finally:
         cur.close()
         conn.close()
+
+
+# =========================
+# FACE PASSENGER EXIT
+# =========================
+def face_passenger_exit():
+    user_id = recognize_face()
+
+    if not user_id:
         return jsonify({
             "success": False,
-            "message": "Current stop not available for this bus"
-        }), 400
+            "message": "Face not recognized"
+        }), 401
 
-    entry_stop_id = row[0]
+    conn = get_db_connection()
+    cur = conn.cursor()
 
-    # 5️⃣ MARK PASSENGER ENTRY
-    cur.execute("""
-        INSERT INTO journey (
-            user_id,
-            bus_id,
-            entry_stop_id,
-            entry_time,
-            status
+    try:
+        # ACTIVE JOURNEY
+        cur.execute("""
+            SELECT journey_id, entry_stop_id, bus_id
+            FROM journey
+            WHERE user_id = %s
+              AND exit_time IS NULL
+              AND status = 'IN_PROGRESS'
+        """, (user_id,))
+        journey = cur.fetchone()
+
+        if not journey:
+            return jsonify({
+                "success": False,
+                "message": "Passenger is not inside any bus"
+            }), 400
+
+        journey_id, entry_stop_id, bus_id = journey
+
+        # EXIT STOP
+        cur.execute("""
+            SELECT current_stop_id
+            FROM bus
+            WHERE bus_id = %s
+        """, (bus_id,))
+        exit_stop_id = cur.fetchone()[0]
+
+        # DISTANCE CALCULATION
+        cur.execute(
+            "SELECT distance_km FROM route_stops WHERE stop_id = %s",
+            (entry_stop_id,)
         )
-        VALUES (%s, %s, %s, NOW(), 'IN_PROGRESS')
-    """, (user_id, bus_id, entry_stop_id))
+        entry_km = float(cur.fetchone()[0])
 
-    conn.commit()
-    cur.close()
-    conn.close()
+        cur.execute(
+            "SELECT distance_km FROM route_stops WHERE stop_id = %s",
+            (exit_stop_id,)
+        )
+        exit_km = float(cur.fetchone()[0])
 
-    return jsonify({
-        "success": True,
-        "message": "Passenger entry recorded",
-        "user_id": user_id,
-        "entry_stop_id": entry_stop_id
-    })
+        journey_distance = abs(exit_km - entry_km)
+        fare = round(journey_distance * PRICE_PER_KM, 2)
+
+        # WALLET
+        cur.execute("""
+            SELECT wallet_id, balance
+            FROM wallet
+            WHERE user_id = %s
+        """, (user_id,))
+        wallet_id, balance = cur.fetchone()
+        balance = float(balance)
+
+        # 🔥 PARTIAL PAYMENT + DUE LOGIC
+        if balance >= fare:
+            status = "COMPLETED"
+            paid = fare
+            due = 0
+
+            cur.execute("""
+                UPDATE wallet
+                SET balance = balance - %s
+                WHERE wallet_id = %s
+            """, (fare, wallet_id))
+
+        else:
+            status = "COMPLETED_WITH_DUE"
+            paid = balance
+            due = round(fare - balance, 2)
+
+            cur.execute("""
+                UPDATE wallet
+                SET balance = 0
+                WHERE wallet_id = %s
+            """, (wallet_id,))
+
+        # JOURNEY UPDATE
+        cur.execute("""
+            UPDATE journey
+            SET exit_stop_id = %s,
+                exit_time = NOW(),
+                distance_km = %s,
+                status = %s
+            WHERE journey_id = %s
+        """, (exit_stop_id, journey_distance, status, journey_id))
+
+        # FARE RECORD
+        cur.execute("""
+            INSERT INTO fare_record (
+                journey_id,
+                distance,
+                fare_amount,
+                paid_amount,
+                due_amount
+            )
+            VALUES (%s, %s, %s, %s, %s)
+        """, (journey_id, journey_distance, fare, paid, due))
+
+        # TRANSACTION (ONLY WHAT WAS PAID)
+        if paid > 0:
+            cur.execute("""
+                INSERT INTO transactions (wallet_id, amount, type)
+                VALUES (%s, %s, 'DEBIT')
+            """, (wallet_id, paid))
+
+        conn.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Passenger exit successful",
+            "fare": fare,
+            "paid": paid,
+            "due": due,
+            "status": status
+        })
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({
+            "success": False,
+            "message": "Exit failed",
+            "error": str(e)
+        }), 500
+
+    finally:
+        cur.close()
+        conn.close()

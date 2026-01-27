@@ -7,5 +7,5 @@ def get_db_connection():
         user=Config.DB_USER,
         host=Config.DB_HOST
     )
-    conn.autocommit = True
+    conn.autocommit = False  # 🔴 IMPORTANT
     return conn
