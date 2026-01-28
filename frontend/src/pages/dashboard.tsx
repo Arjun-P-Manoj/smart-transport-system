@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
+/* ---------------- TYPES ---------------- */
 type DashboardData = {
   name: string;
   wallet_balance: number;
   face_registered: boolean;
+  due: {
+    amount: number;
+    source: string;
+    destination: string;
+  } | null;
 };
 
 type Journey = {
@@ -12,82 +19,37 @@ type Journey = {
   source: string;
   destination: string;
   date: string;
-  fare: number;
+  fare: number | string;
 };
 
+type WalletTx = {
+  timestamp: string;
+  type: "DEBIT" | "CREDIT";
+  amount: number;
+  status: string;
+};
+
+const API = "http://127.0.0.1:5050";
+
+/* ================= COMPONENT ================= */
+
 export default function Dashboard() {
-  const navigate = useNavigate();``
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState<
     "dashboard" | "journey" | "wallet"
   >("dashboard");
+
   const [data, setData] = useState<DashboardData | null>(null);
+  const [journeys, setJourneys] = useState<Journey[]>([]);
+  const [transactions, setTransactions] = useState<WalletTx[]>([]);
   const [search, setSearch] = useState("");
   const [rechargeAmount, setRechargeAmount] = useState("");
   const [showFaceModal, setShowFaceModal] = useState(false);
   const [faceLoading, setFaceLoading] = useState(false);
 
-  const handleReRegisterFace = async () => {
-    if (faceLoading) return; // 🔒 HARD GUARD (prevents double click)
+  /* ---------------- FETCH ALL ---------------- */
 
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    setFaceLoading(true); // 🔒 LOCK BUTTON IMMEDIATELY
-
-    try {
-      const res = await fetch("http://127.0.0.1:5050/re-register-face", {
-        method: "POST",
-        headers: {
-          Authorization: "Bearer " + token,
-        },
-      });
-
-      const result = await res.json();
-
-      if (!res.ok) {
-        alert(result.error || "Face update failed");
-        return;
-      }
-
-      alert("Face updated successfully ✅");
-      setShowFaceModal(false);
-
-      // Refresh dashboard state
-      setData((prev) => (prev ? { ...prev, face_registered: true } : prev));
-    } catch {
-      alert("Server error");
-    } finally {
-      setFaceLoading(false); // 🔓 UNLOCK AFTER REQUEST COMPLETES
-    }
-  };
-
-  /* ---------------- DUMMY DATA ---------------- */
-  const journeys: Journey[] = [
-    {
-      bus: "KSRTC Swift",
-      source: "Thrissur",
-      destination: "Kochi",
-      date: "2026-01-10",
-      fare: 120,
-    },
-    {
-      bus: "City Bus",
-      source: "Irinjalakuda",
-      destination: "Thrissur",
-      date: "2026-01-08",
-      fare: 35,
-    },
-  ];
-
-  const totalFare = journeys.reduce((s, j) => s + j.fare, 0);
-
-  const filteredJourneys = journeys.filter((j) =>
-    `${j.bus} ${j.source} ${j.destination}`
-      .toLowerCase()
-      .includes(search.toLowerCase()),
-  );
-
-  /* ---------------- FETCH DASHBOARD ---------------- */
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -95,23 +57,30 @@ export default function Dashboard() {
       return;
     }
 
-    const fetchDashboard = async () => {
+    const fetchAll = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:5050/dashboard", {
-          headers: {
-            Authorization: "Bearer " + token,
-          },
-        });
+        const [dashRes, journeyRes, walletRes] = await Promise.all([
+          fetch(`${API}/dashboard`, {
+            headers: { Authorization: "Bearer " + token },
+          }),
+          fetch(`${API}/dashboard/journeys`, {
+            headers: { Authorization: "Bearer " + token },
+          }),
+          fetch(`${API}/api/wallet/transactions`, {
+            headers: { Authorization: "Bearer " + token },
+          }),
+        ]);
 
-        const result = await res.json();
-        setData(result);
-      } catch (error) {
+        setData(await dashRes.json());
+        setJourneys(await journeyRes.json());
+        setTransactions(await walletRes.json());
+      } catch {
         localStorage.removeItem("token");
         navigate("/login");
       }
     };
 
-    fetchDashboard();
+    fetchAll();
   }, [navigate]);
 
   if (!data) {
@@ -122,30 +91,106 @@ export default function Dashboard() {
     );
   }
 
+  /* ---------------- DERIVED DATA ---------------- */
+
+  const totalFare = journeys.reduce((sum, j) => sum + Number(j.fare || 0), 0);
+
+  const totalSpent = transactions
+    .filter((t) => t.type === "DEBIT")
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+  const totalRecharges = transactions
+    .filter((t) => t.type === "CREDIT")
+    .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+  const filteredJourneys = journeys.filter((j) =>
+    `${j.bus} ${j.source} ${j.destination}`
+      .toLowerCase()
+      .includes(search.toLowerCase()),
+  );
+
+  /* ---------------- ACTIONS ---------------- */
+
+  const handleReRegisterFace = async () => {
+    if (faceLoading) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      setFaceLoading(true);
+
+      const res = await fetch(`${API}/re-register-face`, {
+        method: "POST",
+        headers: { Authorization: "Bearer " + token },
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message);
+
+      toast.success("Face re-registered successfully ✅");
+      setData((p) => (p ? { ...p, face_registered: true } : p));
+      setShowFaceModal(false);
+    } catch (e: any) {
+      toast.error(e.message || "Face re-registration failed");
+    } finally {
+      setFaceLoading(false);
+    }
+  };
+
+  const handleRecharge = async () => {
+    if (!rechargeAmount) return toast.warning("Enter recharge amount");
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API}/api/wallet/recharge`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + token,
+        },
+        body: JSON.stringify({ amount: Number(rechargeAmount) }),
+      });
+
+      const result = await res.json();
+      if (!result.success) throw new Error(result.message);
+
+      toast.success("Wallet recharged successfully 💳");
+      setData((p) =>
+        p ? { ...p, wallet_balance: result.current_balance } : p,
+      );
+      setRechargeAmount("");
+    } catch (e: any) {
+      toast.error(e.message || "Recharge failed");
+    }
+  };
+
+  /* ================= UI ================= */
+
   return (
     <div className="flex h-screen bg-black text-white">
-      {/* ---------------- SIDEBAR ---------------- */}
+      {/* SIDEBAR */}
       <aside className="w-64 bg-zinc-950 border-r border-zinc-800 p-6 flex flex-col">
         <h2 className="text-2xl font-bold text-indigo-400 mb-10">
           Smart Transport
         </h2>
 
         <nav className="space-y-4 text-sm flex-1">
-          <NavItem
-            label="Dashboard"
-            active={activeTab === "dashboard"}
-            onClick={() => setActiveTab("dashboard")}
-          />
-          <NavItem
-            label="Journey"
-            active={activeTab === "journey"}
-            onClick={() => setActiveTab("journey")}
-          />
-          <NavItem
-            label="Wallet"
-            active={activeTab === "wallet"}
-            onClick={() => setActiveTab("wallet")}
-          />
+          {["dashboard", "journey", "wallet"].map((t) => (
+            <button
+              key={t}
+              onClick={() => setActiveTab(t as any)}
+              className={`block w-full text-left ${
+                activeTab === t
+                  ? "text-indigo-400"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              {t[0].toUpperCase() + t.slice(1)}
+            </button>
+          ))}
         </nav>
 
         <button
@@ -159,16 +204,15 @@ export default function Dashboard() {
         </button>
       </aside>
 
-      {/* ---------------- MAIN ---------------- */}
+      {/* MAIN */}
       <main className="flex-1 p-8 overflow-y-auto">
-        {/* DASHBOARD HOME */}
+        {/* DASHBOARD */}
         {activeTab === "dashboard" && (
           <>
             <h1 className="text-3xl font-bold mb-6">Hey {data.name} 👋</h1>
 
-            {/* STATS */}
             <div className="grid md:grid-cols-4 gap-6 mb-10">
-              <Stat title="Total Trips" value={journeys.length.toString()} />
+              <Stat title="Total Trips" value={journeys.length} />
               <Stat title="Total Fare Spent" value={`₹ ${totalFare}`} />
               <Stat
                 title="Wallet Balance"
@@ -184,8 +228,7 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* FACE ACTION */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8 flex justify-between items-center">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8 flex justify-between">
               <div>
                 <p className="font-semibold">Face Recognition</p>
                 <p className="text-gray-400 text-sm">
@@ -200,7 +243,6 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* CHART */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8">
               <h2 className="font-semibold mb-4">Journey Analytics</h2>
               <div className="h-40 flex items-center justify-center text-gray-500">
@@ -208,19 +250,26 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* ENTRY / EXIT TIMELINE */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
               <h2 className="font-semibold mb-4">Last Journey Timeline</h2>
               <ul className="space-y-3 text-sm">
-                <li>🟢 Entry – Thrissur – 10:30 AM</li>
-                <li>🔴 Exit – Kochi – 12:10 PM</li>
-                <li className="text-green-400">Fare Deducted – ₹120</li>
+                {journeys[0] ? (
+                  <>
+                    <li>🟢 Entry – {journeys[0].source}</li>
+                    <li>🔴 Exit – {journeys[0].destination}</li>
+                    <li className="text-green-400">
+                      Fare Deducted – ₹ {journeys[0].fare}
+                    </li>
+                  </>
+                ) : (
+                  <li className="text-gray-500">No journeys yet</li>
+                )}
               </ul>
             </div>
           </>
         )}
 
-        {/* JOURNEY TAB */}
+        {/* JOURNEY */}
         {activeTab === "journey" && (
           <>
             <h1 className="text-2xl font-bold mb-6">Journey History</h1>
@@ -232,116 +281,97 @@ export default function Dashboard() {
               className="w-full mb-6 bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-2"
             />
 
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-zinc-800 text-gray-400">
-                  <tr>
-                    <th className="p-3">Bus</th>
-                    <th className="p-3">From</th>
-                    <th className="p-3">To</th>
-                    <th className="p-3">Date</th>
-                    <th className="p-3">Fare</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredJourneys.map((j, i) => (
-                    <tr key={i} className="border-t border-zinc-800">
-                      <td className="p-3">{j.bus}</td>
-                      <td className="p-3">{j.source}</td>
-                      <td className="p-3">{j.destination}</td>
-                      <td className="p-3">{j.date}</td>
-                      <td className="p-3 text-green-400">₹ {j.fare}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table
+              headers={["Bus", "From", "To", "Date", "Fare"]}
+              rows={filteredJourneys.map((j) => [
+                j.bus,
+                j.source,
+                j.destination,
+                j.date,
+                `₹ ${Number(j.fare)}`,
+              ])}
+            />
           </>
         )}
 
-        {/* WALLET TAB */}
+        {/* WALLET */}
         {activeTab === "wallet" && (
           <>
             <h1 className="text-2xl font-bold mb-6">Wallet</h1>
 
-            {/* WALLET STATS */}
+            {/* 🔔 REAL PENDING DUE INDICATOR (SOURCE OF TRUTH) */}
+            {data.due && (
+              <div className="mb-6 bg-yellow-900/30 border border-yellow-600 rounded-xl p-4">
+                <p className="font-semibold text-yellow-400">
+                  ⚠️ Pending Due Detected
+                </p>
+                <p className="text-sm text-gray-300">
+                  ₹{data.due.amount} due for journey from{" "}
+                  <b>{data.due.source}</b> to <b>{data.due.destination}</b>.
+                  This will be auto-deducted on your next wallet recharge.
+                </p>
+              </div>
+            )}
+
             <div className="grid md:grid-cols-3 gap-6 mb-10">
               <Stat
                 title="Available Balance"
                 value={`₹ ${data.wallet_balance}`}
                 accent="text-green-400"
               />
-              <Stat title="Total Spent" value="₹ 195" />
-              <Stat title="Total Recharges" value="₹ 300" />
+              <Stat title="Total Spent" value={`₹ ${totalSpent}`} />
+              <Stat title="Total Recharges" value={`₹ ${totalRecharges}`} />
             </div>
 
-            {/* RECHARGE SECTION */}
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8">
               <h2 className="font-semibold mb-4">Recharge Wallet</h2>
-
-              {/* QUICK AMOUNTS */}
-              <div className="flex gap-3 mb-4 flex-wrap">
-                {[100, 200, 500, 1000].map((amount) => (
-                  <button
-                    key={amount}
-                    onClick={() => setRechargeAmount(amount.toString())}
-                    className="px-4 py-2 rounded-lg border border-zinc-700 text-sm hover:bg-indigo-600 transition"
-                  >
-                    ₹ {amount}
-                  </button>
-                ))}
-              </div>
-
-              {/* INPUT */}
               <div className="flex gap-4">
                 <input
                   type="number"
-                  placeholder="Enter amount"
                   value={rechargeAmount}
                   onChange={(e) => setRechargeAmount(e.target.value)}
                   className="flex-1 bg-black border border-zinc-700 rounded-lg px-4 py-2"
+                  placeholder="Enter amount"
                 />
-                <button className="bg-indigo-600 px-6 py-2 rounded-lg">
+                <button
+                  onClick={handleRecharge}
+                  className="bg-indigo-600 px-6 py-2 rounded-lg"
+                >
                   Recharge
                 </button>
               </div>
-
-              <p className="text-gray-400 text-sm mt-3">
-                Supported methods: UPI, Card (UI only)
-              </p>
             </div>
 
-            {/* WALLET HISTORY */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-              <h2 className="font-semibold p-6 border-b border-zinc-800">
-                Wallet Transactions
-              </h2>
-
-              <table className="w-full text-sm">
-                <thead className="bg-zinc-800 text-gray-400">
-                  <tr>
-                    <th className="p-3 text-left">Date</th>
-                    <th className="p-3 text-left">Type</th>
-                    <th className="p-3 text-left">Amount</th>
-                    <th className="p-3 text-left">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-t border-zinc-800">
-                    <td className="p-3">2026-01-10</td>
-                    <td className="p-3">Fare Deduction</td>
-                    <td className="p-3 text-red-400">- ₹120</td>
-                    <td className="p-3 text-green-400">Success</td>
-                  </tr>
-                  <tr className="border-t border-zinc-800">
-                    <td className="p-3">2026-01-08</td>
-                    <td className="p-3">Recharge</td>
-                    <td className="p-3 text-green-400">+ ₹200</td>
-                    <td className="p-3 text-green-400">Success</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <Table
+              headers={["Date", "Type", "Amount", "Status"]}
+              rows={transactions.map((t) => [
+                t.timestamp,
+                t.type,
+                <span
+                  className={
+                    t.type === "CREDIT"
+                      ? "text-green-400"
+                      : t.status.toLowerCase().includes("due")
+                        ? "text-orange-400"
+                        : "text-red-400"
+                  }
+                >
+                  {t.type === "DEBIT" ? "-" : "+"} ₹{t.amount}
+                </span>,
+                <span
+                  className={
+                    t.status.toLowerCase().includes("due")
+                      ? "text-orange-400 font-semibold"
+                      : t.type === "CREDIT"
+                        ? "text-green-400"
+                        : "text-red-400"
+                  }
+                >
+                  {t.status.toLowerCase().includes("due") && "⚠️ "}
+                  {t.status}
+                </span>,
+              ])}
+            />
           </>
         )}
       </main>
@@ -359,13 +389,9 @@ export default function Dashboard() {
               <button
                 onClick={handleReRegisterFace}
                 disabled={faceLoading}
-                className={`px-4 py-2 rounded-lg ${
-                  faceLoading
-                    ? "bg-indigo-400 opacity-60 cursor-not-allowed"
-                    : "bg-indigo-600"
-                }`}
+                className="bg-indigo-600 px-4 py-2 rounded-lg"
               >
-                {faceLoading ? "Capturing Face..." : "Start Capture"}
+                {faceLoading ? "Capturing..." : "Start Capture"}
               </button>
             </div>
           </div>
@@ -375,26 +401,42 @@ export default function Dashboard() {
   );
 }
 
-/* ---------------- COMPONENTS ---------------- */
-
-function NavItem({ label, active, onClick }: any) {
-  return (
-    <button
-      onClick={onClick}
-      className={`block w-full text-left ${
-        active ? "text-indigo-400" : "text-gray-400 hover:text-white"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
+/* ---------------- SHARED ---------------- */
 
 function Stat({ title, value, accent = "text-white" }: any) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
       <p className="text-gray-400 text-sm mb-2">{title}</p>
       <p className={`text-2xl font-bold ${accent}`}>{value}</p>
+    </div>
+  );
+}
+
+function Table({ headers, rows }: any) {
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-zinc-800 text-gray-400">
+          <tr>
+            {headers.map((h: string) => (
+              <th key={h} className="p-3 text-left">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r: any[], i: number) => (
+            <tr key={i} className="border-t border-zinc-800">
+              {r.map((c, j) => (
+                <td key={j} className="p-3">
+                  {c}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
