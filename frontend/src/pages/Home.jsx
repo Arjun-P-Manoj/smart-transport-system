@@ -33,17 +33,6 @@ export default function Home() {
               Login
             </button>
           </Link>
-
-          <Link to="/facelogin">
-            <button className="px-6 py-3 rounded-full border border-gray-600">
-              Face Login
-            </button>
-          </Link>
-          <Link to="/driver">
-            <button className="px-6 py-3 rounded-full bg-white text-black">
-              Driver Dashboard
-            </button>
-          </Link>
         </div>
       </div>
     </div>
