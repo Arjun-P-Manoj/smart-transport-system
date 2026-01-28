@@ -10,13 +10,14 @@ from routes.passenger_routes import passenger_bp
 from routes.passenger_view_routes import passenger_view_bp
 from routes.wallet_routes import wallet_bp
 from routes.dashboard_routes import dashboard_bp
+from routes.admin_dashboard_routes import admin_dashboard_routes
 
 
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = Config.SECRET_KEY
 
-CORS(app)
+CORS(app, supports_credentials=True)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(face_bp)
@@ -26,6 +27,8 @@ app.register_blueprint(passenger_bp, url_prefix="/api")
 app.register_blueprint(passenger_view_bp, url_prefix="/api")
 app.register_blueprint(wallet_bp, url_prefix="/api")
 app.register_blueprint(dashboard_bp)
+app.register_blueprint(admin_dashboard_routes)
+
 
 
 
