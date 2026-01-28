@@ -1,19 +1,15 @@
 import jwt
 from flask import request, jsonify, current_app
 from functools import wraps
+
 def token_required(f):
     @wraps(f)
     def wrapped(*args, **kwargs):
-
-        # 🔓 Allow driver APIs without token
-        if request.path.startswith("/api/driver") or request.path.startswith("/api/journey/bus"):
-            return f(*args, **kwargs)
 
         auth_header = request.headers.get("Authorization")
 
         if not auth_header:
             return jsonify({"error": "Token missing"}), 401
-
 
         try:
             token = auth_header.split(" ")[1]
@@ -22,12 +18,15 @@ def token_required(f):
                 current_app.config["SECRET_KEY"],
                 algorithms=["HS256"]
             )
-            request.user = data
+
+            user_id = data["user_id"]
 
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Token expired"}), 401
         except Exception:
             return jsonify({"error": "Invalid token"}), 401
 
-        return f(*args, **kwargs)
+        # ✅ PASS user_id INTO ROUTE
+        return f(user_id, *args, **kwargs)
+
     return wrapped

@@ -9,6 +9,7 @@ from routes.driver_routes import driver_bp
 from routes.passenger_routes import passenger_bp
 from routes.passenger_view_routes import passenger_view_bp
 from routes.wallet_routes import wallet_bp
+from routes.dashboard_routes import dashboard_bp
 
 
 
@@ -24,7 +25,7 @@ app.register_blueprint(driver_bp, url_prefix="/api")
 app.register_blueprint(passenger_bp, url_prefix="/api")
 app.register_blueprint(passenger_view_bp, url_prefix="/api")
 app.register_blueprint(wallet_bp, url_prefix="/api")
-
+app.register_blueprint(dashboard_bp)
 
 
 

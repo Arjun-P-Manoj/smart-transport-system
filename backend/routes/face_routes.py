@@ -10,6 +10,5 @@ def face_login_route():
 
 @face_bp.route("/re-register-face", methods=["POST"])
 @token_required
-def re_register_face_route():
-    user_id = request.user["user_id"]
+def re_register_face_route(user_id):
     return register_face(user_id)

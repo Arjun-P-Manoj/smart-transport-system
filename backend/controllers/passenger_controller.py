@@ -131,22 +131,20 @@ def face_passenger_exit():
     user_id = recognize_face()
 
     if not user_id:
-        return jsonify({
-            "success": False,
-            "message": "Face not recognized"
-        }), 401
+        return jsonify({"success": False, "message": "Face not recognized"}), 401
 
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
-        # ACTIVE JOURNEY
+        # 🔐 LOCK ACTIVE JOURNEY
         cur.execute("""
             SELECT journey_id, entry_stop_id, bus_id
             FROM journey
             WHERE user_id = %s
               AND exit_time IS NULL
               AND status = 'IN_PROGRESS'
+            FOR UPDATE
         """, (user_id,))
         journey = cur.fetchone()
 
@@ -166,55 +164,44 @@ def face_passenger_exit():
         """, (bus_id,))
         exit_stop_id = cur.fetchone()[0]
 
-        # DISTANCE CALCULATION
-        cur.execute(
-            "SELECT distance_km FROM route_stops WHERE stop_id = %s",
-            (entry_stop_id,)
-        )
+        # DISTANCE
+        cur.execute("""
+            SELECT distance_km FROM route_stops WHERE stop_id = %s
+        """, (entry_stop_id,))
         entry_km = float(cur.fetchone()[0])
 
-        cur.execute(
-            "SELECT distance_km FROM route_stops WHERE stop_id = %s",
-            (exit_stop_id,)
-        )
+        cur.execute("""
+            SELECT distance_km FROM route_stops WHERE stop_id = %s
+        """, (exit_stop_id,))
         exit_km = float(cur.fetchone()[0])
 
         journey_distance = abs(exit_km - entry_km)
         fare = round(journey_distance * PRICE_PER_KM, 2)
 
-        # WALLET
+        # 🔐 LOCK WALLET
         cur.execute("""
             SELECT wallet_id, balance
             FROM wallet
             WHERE user_id = %s
+            FOR UPDATE
         """, (user_id,))
         wallet_id, balance = cur.fetchone()
         balance = float(balance)
 
-        # 🔥 PARTIAL PAYMENT + DUE LOGIC
-        if balance >= fare:
-            status = "COMPLETED"
-            paid = fare
-            due = 0
+        # 🔑 CORE LOGIC
+        paid = min(balance, fare)
+        due = round(fare - paid, 2)
 
+        # UPDATE WALLET (only what was paid)
+        if paid > 0:
             cur.execute("""
                 UPDATE wallet
                 SET balance = balance - %s
                 WHERE wallet_id = %s
-            """, (fare, wallet_id))
+            """, (paid, wallet_id))
 
-        else:
-            status = "COMPLETED_WITH_DUE"
-            paid = balance
-            due = round(fare - balance, 2)
-
-            cur.execute("""
-                UPDATE wallet
-                SET balance = 0
-                WHERE wallet_id = %s
-            """, (wallet_id,))
-
-        # JOURNEY UPDATE
+        # UPDATE JOURNEY
+        status = "COMPLETED_WITH_DUE" if due > 0 else "COMPLETED"
         cur.execute("""
             UPDATE journey
             SET exit_stop_id = %s,
@@ -236,18 +223,23 @@ def face_passenger_exit():
             VALUES (%s, %s, %s, %s, %s)
         """, (journey_id, journey_distance, fare, paid, due))
 
-        # TRANSACTION (ONLY WHAT WAS PAID)
+        # ✅ TRANSACTION → JOURNEY FARE (IMPORTANT FIX)
         if paid > 0:
             cur.execute("""
-                INSERT INTO transactions (wallet_id, amount, type)
-                VALUES (%s, %s, 'DEBIT')
-            """, (wallet_id, paid))
+                INSERT INTO transactions (
+                    wallet_id,
+                    journey_id,
+                    amount,
+                    type,
+                    reason
+                )
+                VALUES (%s, %s, %s, 'DEBIT', 'JOURNEY_FARE')
+            """, (wallet_id, journey_id, paid))
 
         conn.commit()
 
         return jsonify({
             "success": True,
-            "message": "Passenger exit successful",
             "fare": fare,
             "paid": paid,
             "due": due,

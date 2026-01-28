@@ -1,44 +1,62 @@
 from flask import jsonify, request
+from psycopg2.extras import RealDictCursor
 from db.database import get_db_connection
+from decimal import Decimal
 
 
-def wallet_recharge():
-    """
-    Wallet recharge with auto due settlement
-    (User already authenticated via login)
-    """
-
+# =========================
+# WALLET RECHARGE
+# =========================
+def wallet_recharge(user_id):
     data = request.json or {}
-    user_id = data.get("user_id")
     amount = data.get("amount")
 
-    if not user_id:
-        return jsonify({
-            "success": False,
-            "message": "user_id is required"
-        }), 400
-
-    if not amount or amount <= 0:
+    if amount is None or amount <= 0:
         return jsonify({
             "success": False,
             "message": "Invalid recharge amount"
         }), 400
 
+    # 🔒 Always convert input to Decimal
+    amount = Decimal(str(amount))
+
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
-        # 1️⃣ ADD RECHARGE AMOUNT
+        # 🔐 LOCK WALLET ROW
+        cur.execute("""
+            SELECT wallet_id, balance
+            FROM wallet
+            WHERE user_id = %s
+            FOR UPDATE
+        """, (user_id,))
+
+        wallet = cur.fetchone()
+        if not wallet:
+            return jsonify({
+                "success": False,
+                "message": "Wallet not found"
+            }), 404
+
+        wallet_id, balance = wallet
+        balance = Decimal(balance)
+
+        # 1️⃣ CREDIT transaction (RECHARGE)
+        cur.execute("""
+            INSERT INTO transactions (wallet_id, amount, type, reason)
+VALUES (%s, %s, 'CREDIT', 'RECHARGE')
+        """, (wallet_id, amount))
+
+        # 2️⃣ Update wallet balance
+        new_balance = balance + amount
         cur.execute("""
             UPDATE wallet
-            SET balance = balance + %s
-            WHERE user_id = %s
-            RETURNING balance
-        """, (amount, user_id))
+            SET balance = %s
+            WHERE wallet_id = %s
+        """, (new_balance, wallet_id))
 
-        new_balance = float(cur.fetchone()[0])
-
-        # 2️⃣ CHECK FOR PENDING DUE (LATEST ONLY)
+        # 3️⃣ Check latest pending due
         cur.execute("""
             SELECT j.journey_id, fr.due_amount
             FROM journey j
@@ -51,54 +69,104 @@ def wallet_recharge():
         """, (user_id,))
 
         row = cur.fetchone()
-        cleared_due = 0
+        cleared_due = Decimal("0.00")
 
         if row:
             journey_id, due_amount = row
-            due_amount = float(due_amount)
+            due_amount = Decimal(due_amount)
 
-            if new_balance >= due_amount:
-                # 3️⃣ CLEAR DUE
+            # 🔑 CORE SETTLEMENT LOGIC
+            paid = min(new_balance, due_amount)
+
+            if paid > 0:
+                # 4️⃣ DEBIT transaction (due settlement)
+                cur.execute("""
+    INSERT INTO transactions (wallet_id, journey_id, amount, type, reason)
+    VALUES (%s, %s, %s, 'DEBIT', 'DUE_SETTLEMENT')
+""", (wallet_id, journey_id, paid))
+
+
+                # update wallet
+                new_balance = new_balance - paid
                 cur.execute("""
                     UPDATE wallet
-                    SET balance = balance - %s
-                    WHERE user_id = %s
-                """, (due_amount, user_id))
+                    SET balance = %s
+                    WHERE wallet_id = %s
+                """, (new_balance, wallet_id))
 
+                # update fare record
                 cur.execute("""
                     UPDATE fare_record
                     SET paid_amount = paid_amount + %s,
-                        due_amount = 0
+                        due_amount = due_amount - %s
                     WHERE journey_id = %s
-                """, (due_amount, journey_id))
+                """, (paid, paid, journey_id))
 
-                cur.execute("""
-                    UPDATE journey
-                    SET status = 'COMPLETED'
-                    WHERE journey_id = %s
-                """, (journey_id,))
+                # update journey status
+                if paid == due_amount:
+                    cur.execute("""
+                        UPDATE journey
+                        SET status = 'COMPLETED'
+                        WHERE journey_id = %s
+                    """, (journey_id,))
+                else:
+                    cur.execute("""
+                        UPDATE journey
+                        SET status = 'COMPLETED_WITH_DUE'
+                        WHERE journey_id = %s
+                    """, (journey_id,))
 
-                cleared_due = due_amount
-                new_balance -= due_amount
+                cleared_due = paid
 
         conn.commit()
 
         return jsonify({
             "success": True,
-            "message": "Wallet recharged successfully",
-            "recharged_amount": amount,
-            "due_cleared": cleared_due,
-            "current_balance": round(new_balance, 2)
+            "recharged_amount": float(amount),
+            "due_cleared": float(cleared_due),
+            "current_balance": float(new_balance)
         })
 
     except Exception as e:
         conn.rollback()
         return jsonify({
             "success": False,
-            "message": "Recharge failed",
             "error": str(e)
         }), 500
 
     finally:
         cur.close()
         conn.close()
+
+
+# =========================
+# WALLET TRANSACTIONS
+# =========================
+def get_wallet_transactions(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
+    cur.execute("""
+        SELECT
+            transaction_id,
+            created_at AS timestamp,
+            type,
+            amount,
+            CASE
+                WHEN reason = 'RECHARGE' THEN 'Wallet Recharge'
+                WHEN reason = 'DUE_SETTLEMENT' THEN 'Due Settlement'
+                WHEN reason = 'JOURNEY_FARE' THEN 'Journey Fare'
+                ELSE 'Transaction'
+            END AS status
+        FROM transactions
+        WHERE wallet_id = (
+            SELECT wallet_id FROM wallet WHERE user_id = %s
+        )
+        ORDER BY transaction_id DESC
+    """, (user_id,))
+
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return jsonify(rows)
