@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import JourneyAreaChart from "../components/analytics/JourneyAreaChart";
 
 /* ---------------- TYPES ---------------- */
 type DashboardData = {
@@ -92,7 +93,24 @@ export default function Dashboard() {
   }
 
   /* ---------------- DERIVED DATA ---------------- */
+  // 📈 CONTINUOUS FARE ANALYTICS (LAST 7 DAYS)
+  const last7Days = [...Array(7)].map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().split("T")[0];
+  });
 
+  const analyticsData = last7Days.map((date) => {
+    const dayJourneys = journeys.filter((j) => {
+      const journeyDate = new Date(j.date).toISOString().split("T")[0];
+      return journeyDate === date;
+    });
+
+    return {
+      date,
+      fare: dayJourneys.reduce((sum, j) => sum + Number(j.fare || 0), 0),
+    };
+  });
   const totalFare = journeys.reduce((sum, j) => sum + Number(j.fare || 0), 0);
 
   const totalSpent = transactions
@@ -108,7 +126,6 @@ export default function Dashboard() {
       .toLowerCase()
       .includes(search.toLowerCase()),
   );
-
   /* ---------------- ACTIONS ---------------- */
 
   const handleReRegisterFace = async () => {
@@ -210,6 +227,41 @@ export default function Dashboard() {
         {activeTab === "dashboard" && (
           <>
             <h1 className="text-3xl font-bold mb-6">Hey {data.name} 👋</h1>
+            {data.due && (
+              <div className="mb-8 flex items-start gap-4 rounded-xl border border-yellow-600/40 bg-yellow-900/20 p-5">
+                <div className="text-yellow-400 text-xl mt-1">⚠️</div>
+
+                <div className="flex-1">
+                  <p className="font-semibold text-yellow-300 mb-1">
+                    Pending Fare Due
+                  </p>
+
+                  <p className="text-sm text-gray-300 leading-relaxed">
+                    <span className="font-semibold text-yellow-200">
+                      ₹{data.due.amount}
+                    </span>{" "}
+                    pending for journey from{" "}
+                    <span className="font-medium text-white">
+                      {data.due.source}
+                    </span>{" "}
+                    to{" "}
+                    <span className="font-medium text-white">
+                      {data.due.destination}
+                    </span>
+                    .
+                    <br />
+                    This will be auto-deducted on your next wallet recharge.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setActiveTab("wallet")}
+                  className="text-sm text-yellow-300 hover:text-yellow-200 underline whitespace-nowrap"
+                >
+                  Go to Wallet
+                </button>
+              </div>
+            )}
 
             <div className="grid md:grid-cols-4 gap-6 mb-10">
               <Stat title="Total Trips" value={journeys.length} />
@@ -243,28 +295,57 @@ export default function Dashboard() {
               </button>
             </div>
 
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8 overflow-hidden">
+              {" "}
               <h2 className="font-semibold mb-4">Journey Analytics</h2>
-              <div className="h-40 flex items-center justify-center text-gray-500">
-                📊 Chart (Trips / Fare over time)
+              <div className="h-[220px]">
+                <JourneyAreaChart data={analyticsData} />
               </div>
             </div>
 
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-              <h2 className="font-semibold mb-4">Last Journey Timeline</h2>
-              <ul className="space-y-3 text-sm">
-                {journeys[0] ? (
-                  <>
-                    <li>🟢 Entry – {journeys[0].source}</li>
-                    <li>🔴 Exit – {journeys[0].destination}</li>
-                    <li className="text-green-400">
-                      Fare Deducted – ₹ {journeys[0].fare}
-                    </li>
-                  </>
-                ) : (
-                  <li className="text-gray-500">No journeys yet</li>
-                )}
-              </ul>
+              <h2 className="font-semibold mb-6">Last Journey</h2>
+
+              {journeys[0] ? (
+                <div className="flex items-center justify-between gap-6">
+                  {/* ENTRY */}
+                  <div className="flex items-center gap-3">
+                    <span className="w-3 h-3 rounded-full bg-green-500" />
+                    <div>
+                      <p className="text-xs text-gray-400">Entry</p>
+                      <p className="text-sm font-medium text-white">
+                        {journeys[0].source}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* CONNECTOR */}
+                  <div className="flex-1 flex items-center">
+                    <span className="w-full h-px bg-zinc-700" />
+                  </div>
+
+                  {/* EXIT */}
+                  <div className="flex items-center gap-3">
+                    <span className="w-3 h-3 rounded-full bg-red-500" />
+                    <div>
+                      <p className="text-xs text-gray-400">Exit</p>
+                      <p className="text-sm font-medium text-white">
+                        {journeys[0].destination}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* FARE */}
+                  <div className="text-right min-w-[90px]">
+                    <p className="text-xs text-gray-400">Fare</p>
+                    <p className="text-green-400 font-semibold text-base">
+                      ₹ {journeys[0].fare}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">No journeys yet</p>
+              )}
             </div>
           </>
         )}
@@ -324,7 +405,7 @@ export default function Dashboard() {
             </div>
 
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8">
-              <h2 className="font-semibold mb-4">Recharge Wallet</h2>
+              <h2 className="font-semibold mb-4">Top Up Wallet</h2>
               <div className="flex gap-4">
                 <input
                   type="number"
