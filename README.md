@@ -1,3 +1,146 @@
+# Smart Transport System
+
+> A full-stack smart transport system with facial recognition login, journey and passenger management, driver and admin dashboards, and a web frontend built with Vite/React.
+
+---
+
+## Table of Contents
+- [Project Overview](#project-overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Repository Structure](#repository-structure)
+- [Prerequisites](#prerequisites)
+- [Backend Setup (Python)](#backend-setup-python)
+- [Frontend Setup (Vite / React)](#frontend-setup-vite--react)
+- [Running the System](#running-the-system)
+- [Important Files & Notes](#important-files--notes)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Project Overview
+
+This repository contains a full-stack application called Smart Transport System. The backend (Python) provides RESTful APIs, authentication middleware, ML utilities for face encoding/verification, and controllers for passengers, drivers, journeys, wallets and admin dashboards. The frontend is a Vite + React application that consumes the backend APIs and provides UI for passengers, drivers, and admins.
+
+## Features
+
+- Facial recognition login and verification (backend `ml/`)
+- Role-based authentication and middleware
+- Passenger and driver management
+- Journey creation, booking and tracking
+- Admin dashboard with analytics and management pages
+- Wallet and transaction management
+
+## Tech Stack
+
+- Backend: Python (Flask-style structure — see `backend/app.py`)
+- Frontend: React with Vite (located in `frontend/`)
+- ML: Face encoding and verification scripts in `backend/ml/`
+- Database: Project includes a `db/` module for database connection and helpers
+
+## Repository Structure
+
+Top-level layout (major folders):
+
+- `backend/` — Python API server, controllers, routes, middleware, ML utilities, and config
+- `frontend/` — Vite + React frontend application
+
+You can explore more detailed files and modules inside each folder. The backend routes are defined under `backend/routes/` and controllers are in `backend/controllers/`.
+
+## Prerequisites
+
+- Python 3.8+ (recommended)
+- Node.js 16+ and npm/yarn for the frontend
+- Optional: GPU / native libs for faster face recognition if you customize ML dependencies
+
+## Backend Setup (Python)
+
+1. Create and activate a virtual environment:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+2. Install dependencies (if a `requirements.txt` exists in the repo root or `backend/`):
+
+```bash
+pip install -r backend/requirements.txt
+# or, if requirements are in project root:
+pip install -r requirements.txt
+```
+
+3. Configure environment variables or review `backend/config/config.py` for configuration keys (DB settings, secret keys, ports). The project uses `backend/config/config.py` to centralize configuration values.
+
+4. Run the backend server (common entrypoint — adjust if your project uses a different runner):
+
+```bash
+python backend/app.py
+```
+
+Notes:
+- If the backend expects a specific command (for example `flask run` or an ASGI/uvicorn command), follow that runner. `backend/app.py` is the primary entrypoint in this repository.
+
+## Frontend Setup (Vite / React)
+
+1. Enter the frontend folder and install dependencies:
+
+```bash
+cd frontend
+npm install
+# or
+yarn
+```
+
+2. Start the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+The dev server usually runs on `http://localhost:5173` (default Vite port) unless configured otherwise in `vite.config.js`.
+
+## Running the System
+
+1. Start the backend (see Backend Setup).
+2. Start the frontend dev server (see Frontend Setup).
+3. Open the frontend in the browser and use the UI to access passenger, driver, and admin pages. The frontend will call the backend routes under the configured API base URL.
+
+## Important Files & Notes
+
+- Backend entry: `backend/app.py` — application entrypoint
+- Config: `backend/config/config.py` — environment-driven configuration
+- Routes: `backend/routes/` — API route definitions
+- Controllers: `backend/controllers/` — request handling and business logic
+- ML: `backend/ml/face_encode.py`, `backend/ml/face_verify.py` — face recognition utilities
+- Database helpers: `backend/db/database.py`
+
+If you add or modify environment variables, update `backend/config/config.py` accordingly and restart the backend.
+
+## Contributing
+
+Contributions are welcome. Suggested workflow:
+
+1. Create a feature branch from `main` or `master`.
+2. Implement changes and add tests where appropriate.
+3. Open a pull request describing the change, rationale, and testing instructions.
+
+Please avoid changing existing API contracts without coordinating with frontend updates.
+
+## Troubleshooting
+
+- If frontend cannot contact backend: verify backend is running and that CORS and API base URL are correctly configured.
+- If face recognition fails: check ML dependencies, model files, and that camera/image inputs are provided in expected formats.
+
+## License
+
+This README does not include a license file. If you wish to add one, consider adding an `LICENSE` (for example MIT) to the repository root.
+
+---
+If you want, I can also add an example `requirements.txt`, a `start` script, or adjust the README to include screenshots and API examples. Would you like me to add API endpoint documentation next?
 # Cashless, Automated Public Transport System Using Facial Recognition
 
 [![Python](https://img.shields.io/badge/Python-3.9+-3776ab?style=flat-square&logo=python)](https://www.python.org/)
