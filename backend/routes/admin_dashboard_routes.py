@@ -15,7 +15,9 @@ from controllers.admin_dashboard_controller import (
     add_route_stops,
     activate_bus,
     assign_route_to_bus,
-    get_admin_routes
+    get_admin_routes,
+    get_routes_without_stops,
+    deactivate_bus
 )
 
 
@@ -104,3 +106,18 @@ admin_dashboard_routes.route(
     "/admin/buses/<int:bus_id>/assign-route",
     methods=["POST", "OPTIONS"]
 )(assign_route_to_bus)
+
+admin_dashboard_routes.route(
+    "/admin/routes/without-stops",
+    methods=["GET"]
+)(get_routes_without_stops)
+
+admin_dashboard_routes.route(
+    "/admin/routes/<int:route_id>/stops",
+    methods=["POST", "OPTIONS"]
+)(add_route_stops)
+
+admin_dashboard_routes.route(
+    "/admin/buses/<int:bus_id>/deactivate",
+    methods=["POST"]
+)(deactivate_bus)

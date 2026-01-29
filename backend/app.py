@@ -17,7 +17,11 @@ from routes.admin_dashboard_routes import admin_dashboard_routes
 app = Flask(__name__)
 app.config["SECRET_KEY"] = Config.SECRET_KEY
 
-CORS(app, supports_credentials=True)
+CORS(
+    app,
+    resources={r"/*": {"origins": "http://localhost:5173"}},
+    supports_credentials=True
+)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(face_bp)
