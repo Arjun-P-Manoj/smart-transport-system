@@ -6,8 +6,6 @@
 [![React](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)](https://react.dev/)
 [![Python](https://img.shields.io/badge/Python-3.8+-yellow?style=flat-square&logo=python)](https://www.python.org/)
 [![Vite](https://img.shields.io/badge/Vite-7.2-646cff?style=flat-square&logo=vite)](https://vitejs.dev/)
-[![License](https://img.shields.io/badge/License-MIT-red?style=flat-square)](LICENSE)
-
 A comprehensive intelligent transport management system featuring facial recognition authentication, real-time journey tracking, multi-user roles, and an advanced admin dashboard.
 
 [Features](#features) • [Installation](#installation) • [Usage](#usage) • [Architecture](#architecture) • [API Documentation](#api-documentation)
