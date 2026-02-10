@@ -6,8 +6,6 @@
 [![React](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)](https://react.dev/)
 [![Python](https://img.shields.io/badge/Python-3.8+-yellow?style=flat-square&logo=python)](https://www.python.org/)
 [![Vite](https://img.shields.io/badge/Vite-7.2-646cff?style=flat-square&logo=vite)](https://vitejs.dev/)
-[![License](https://img.shields.io/badge/License-MIT-red?style=flat-square)](LICENSE)
-
 A comprehensive intelligent transport management system featuring facial recognition authentication, real-time journey tracking, multi-user roles, and an advanced admin dashboard.
 
 [Features](#features) • [Installation](#installation) • [Usage](#usage) • [Architecture](#architecture) • [API Documentation](#api-documentation)
@@ -402,55 +400,3 @@ flake8 .
 | `FLASK_ENV` | Environment type | `development` or `production` |
 
 ---
-
-## 🤝 Contributing
-
-We welcome contributions! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-Please ensure your code follows PEP 8 (Python) and ESLint (JavaScript) standards.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 📧 Support & Contact
-
-For support, questions, or feedback:
-- 📧 Email: your-email@example.com
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/smart-transport-system/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/yourusername/smart-transport-system/discussions)
-
----
-
-## 🙏 Acknowledgments
-
-- Flask community for the excellent web framework
-- React team for the powerful UI library
-- OpenCV for facial recognition capabilities
-- PostgreSQL for reliable database management
-- Vite team for lightning-fast build tooling
-
----
-
-## 📚 Additional Resources
-
-- [Flask Documentation](https://flask.palletsprojects.com/)
-- [React Documentation](https://react.dev/)
-- [Vite Guide](https://vitejs.dev/guide/)
-- [PostgreSQL Docs](https://www.postgresql.org/docs/)
-- [Face Recognition Library](https://github.com/ageitgey/face_recognition)
-
----
-
-**Made with ❤️ by Arjun P Manoj**
-
