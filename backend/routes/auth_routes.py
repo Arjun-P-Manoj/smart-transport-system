@@ -1,17 +1,30 @@
-from flask import Blueprint, request, jsonify
-from middleware.auth import token_required
-from db.database import get_db_connection
+from flask import Blueprint
 
-from controllers.auth_controller import register_user, login_user
+from controllers.auth_controller import (
+    register_user,
+    login_user,
+    send_email_otp_api,
+    verify_email_otp_api
+)
 
 auth_bp = Blueprint("auth", __name__)
 
-# ---------------- REGISTER ----------------
+
+@auth_bp.route("/send-email-otp", methods=["POST"])
+def send_otp():
+    return send_email_otp_api()
+
+
+@auth_bp.route("/verify-email-otp", methods=["POST"])
+def verify_otp():
+    return verify_email_otp_api()
+
+
 @auth_bp.route("/register", methods=["POST"])
-def register_route():
+def register():
     return register_user()
 
-# ---------------- LOGIN ----------------
+
 @auth_bp.route("/login", methods=["POST"])
-def login_route():
+def login():
     return login_user()

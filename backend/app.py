@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 from config.config import Config
+from extensions import mail
 
 from routes.auth_routes import auth_bp
 from routes.face_routes import face_bp
@@ -13,9 +14,11 @@ from routes.dashboard_routes import dashboard_bp
 from routes.admin_dashboard_routes import admin_dashboard_routes
 
 
-
 app = Flask(__name__)
-app.config["SECRET_KEY"] = Config.SECRET_KEY
+app.config.from_object(Config)
+
+# Initialize mail
+mail.init_app(app)
 
 CORS(
     app,
@@ -34,11 +37,10 @@ app.register_blueprint(dashboard_bp)
 app.register_blueprint(admin_dashboard_routes)
 
 
-
-
 @app.route("/")
 def home():
     return {"message": "Backend running"}
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5050, debug=True)
-
