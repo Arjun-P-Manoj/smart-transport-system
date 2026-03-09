@@ -1,14 +1,12 @@
-# Smart Transport System
+# AI Transit - Smart City Transport System
 
 <div align="center">
 
-[![Flask](https://img.shields.io/badge/Flask-3.0-green?style=flat-square&logo=flask)](https://flask.palletsprojects.com/)
-[![React](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)](https://react.dev/)
-[![Python](https://img.shields.io/badge/Python-3.8+-yellow?style=flat-square&logo=python)](https://www.python.org/)
-[![Vite](https://img.shields.io/badge/Vite-7.2-646cff?style=flat-square&logo=vite)](https://vitejs.dev/)
-A comprehensive intelligent transport management system featuring facial recognition authentication, real-time journey tracking, multi-user roles, and an advanced admin dashboard.
+![AI Transit Logo](./frontend/src/assets/logo.png)
 
-[Features](#features) • [Installation](#installation) • [Usage](#usage) • [Architecture](#architecture) • [API Documentation](#api-documentation)
+**A comprehensive AI-powered smart city transportation platform with facial recognition, real-time journey tracking, and secure wallet management.**
+
+[Features](#features) • [Tech Stack](#tech-stack) • [Installation](#installation) • [Usage](#usage) • [Contributing](#contributing)
 
 </div>
 
@@ -16,80 +14,92 @@ A comprehensive intelligent transport management system featuring facial recogni
 
 ## 📋 Overview
 
-Smart Transport System is a full-stack web application designed to revolutionize urban transportation management. It combines modern web technologies with machine learning to provide seamless passenger and driver experiences while offering administrators powerful insights and control over the entire transport network.
+AI Transit is an intelligent transportation management system designed for smart cities. It provides seamless journey booking, real-time tracking, passenger management, and driver coordination with advanced security features including facial recognition and OTP-based authentication.
 
-### Key Highlights
-- 🔐 **Facial Recognition Authentication** - Secure login using face verification
-- 🚌 **Journey Management** - Real-time tracking and scheduling of transport routes
-- 💳 **Integrated Wallet System** - Cashless payment and balance management
-- 📊 **Admin Dashboard** - Comprehensive analytics and control panel
-- 👥 **Multi-Role Support** - Dedicated interfaces for passengers, drivers, and administrators
-- 🎯 **Route Optimization** - Efficient journey planning and management
+The platform supports multiple user roles including **passengers**, **drivers**, and **administrators**, each with specialized dashboards and features.
 
 ---
 
 ## ✨ Features
 
-### For Passengers
-- Secure facial recognition authentication
-- Browse and book available journeys
-- Real-time journey tracking
-- Digital wallet for payments
-- View transaction history
-- Rate and review journeys
+### 🎯 Core Features
 
-### For Drivers
-- Dashboard with assigned routes
-- Passenger management
-- Earnings tracking
-- Journey history and analytics
-- Real-time notifications
+- **User Authentication**
+  - Email/Password registration and login
+  - OTP verification via email
+  - Facial recognition for secure login
+  - Role-based access control
 
-### For Administrators
-- Comprehensive system analytics
-- User and driver management
-- Transport/bus inventory management
-- Journey monitoring and control
-- Transaction and wallet management
-- Revenue analytics and reports
-- System activity tracking
+- **Passenger Management**
+  - Browse available buses and journeys
+  - Real-time bus tracking and status updates
+  - Seamless journey booking
+  - Passenger dashboard with booking history
+
+- **Driver Management**
+  - Driver profile and document management
+  - Active journey management
+  - Real-time location sharing
+  - Performance analytics
+
+- **Journey & Booking System**
+  - Create and manage bus routes
+  - Real-time journey status tracking
+  - Booking management and cancellation
+  - Seat availability tracking
+
+- **Digital Wallet**
+  - Secure payment processing
+  - Transaction history
+  - Balance management
+  - Multiple payment options
+
+- **Admin Dashboard**
+  - User and driver management
+  - Bus fleet management
+  - Journey monitoring
+  - Revenue analytics and reports
+  - Real-time activity tracking
+
+- **AI & Security**
+  - Facial recognition for user authentication
+  - Secure OTP-based verification
+  - JWT token-based authorization
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠 Tech Stack
 
 ### Backend
-- **Framework**: Flask (Python 3.8+)
+- **Framework**: Python Flask
 - **Database**: PostgreSQL
-- **Authentication**: JWT + Facial Recognition
-- **CORS**: Flask-CORS for cross-origin requests
-- **ML**: Face encoding and verification (OpenCV/face_recognition)
+- **Authentication**: JWT (JSON Web Tokens)
+- **Email Service**: Flask-Mail (Gmail SMTP)
+- **CORS**: Flask-CORS
+- **ML/AI**: Python-based facial recognition
+- **Environment**: Python 3.8+
 
 ### Frontend
 - **Framework**: React 19
-- **Build Tool**: Vite 7.2
-- **Routing**: React Router 7
+- **Build Tool**: Vite
 - **Styling**: Tailwind CSS
+- **Routing**: React Router DOM v7
 - **HTTP Client**: Axios
-- **Charts**: Recharts
+- **Data Visualization**: Recharts
 - **Icons**: Lucide React
-- **Notifications**: React Toastify
-
-### Development Tools
-- **Linting**: ESLint
-- **TypeScript Support**: Available
-- **Hot Reload**: Vite with HMR
+- **Notifications**: React-Toastify
+- **Node**: v16+
 
 ---
 
 ## 📦 Prerequisites
 
 Before you begin, ensure you have the following installed:
-- **Python 3.8+** - Backend runtime
-- **Node.js 16+** - Frontend development
-- **npm or yarn** - Package manager
-- **PostgreSQL 12+** - Database
-- **Git** - Version control
+
+- **Python 3.8+** and pip
+- **Node.js 16+** and npm
+- **PostgreSQL 12+**
+- **Git**
 
 ---
 
@@ -98,7 +108,7 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/smart-transport-system.git
+git clone <repository-url>
 cd smart-transport-system
 ```
 
@@ -119,88 +129,90 @@ venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Create .env file with configuration
-cp .env.example .env
-# Update .env with your database credentials and SECRET_KEY
 ```
 
-### 3. Frontend Setup
+### 3. Configure Environment Variables
+
+Create a `.env` file in the `backend` directory:
+
+```env
+# Database Configuration
+DB_NAME=your_database_name
+DB_USER=postgres
+DB_HOST=localhost
+
+# Security
+SECRET_KEY=your-secret-key-here
+
+# Email Configuration
+MAIL_USERNAME=your-gmail@gmail.com
+MAIL_PASSWORD=your-app-password
+
+# Server Configuration
+FLASK_ENV=development
+FLASK_DEBUG=True
+```
+
+### 4. Database Setup
+
+```bash
+# Create PostgreSQL database
+createdb your_database_name
+
+# Run migrations (if applicable)
+# python manage.py db upgrade
+```
+
+### 5. Frontend Setup
 
 ```bash
 # Navigate to frontend directory
-cd ../frontend
+cd frontend
 
 # Install dependencies
 npm install
-# or
-yarn install
+
+# Create .env file if needed
+touch .env
 ```
 
 ---
 
-## ⚙️ Configuration
+## 🎯 Usage
 
-### Backend Configuration (.env)
-
-Create a `.env` file in the `backend` directory with the following variables:
-
-```env
-# Flask
-FLASK_ENV=development
-SECRET_KEY=your-secret-key-here
-
-# Database
-DB_HOST=localhost
-DB_NAME=smart_transport
-DB_USER=postgres
-DB_PASSWORD=your-db-password
-
-# CORS
-CORS_ORIGIN=http://localhost:5173
-
-# Face Recognition (optional)
-FACE_RECOGNITION_MODEL=hog
-```
-
-### Frontend Configuration (vite.config.js)
-
-The frontend is pre-configured to connect to `http://localhost:5050` for API calls. Modify as needed for your deployment environment.
-
----
-
-## 🏃 Running the Application
-
-### Start Backend Server
+### Running the Backend
 
 ```bash
 cd backend
+source venv/bin/activate  # macOS/Linux
 python app.py
 ```
 
-The backend server will run on `http://localhost:5050`
+The backend server will start at `http://localhost:5000`
 
-### Start Frontend Development Server
+### Running the Frontend
 
 ```bash
 cd frontend
 npm run dev
-# or
-yarn dev
 ```
 
 The frontend will be available at `http://localhost:5173`
 
 ### Build for Production
 
+**Frontend:**
 ```bash
-# Frontend
 cd frontend
 npm run build
+npm run preview
+```
 
-# Backend can be deployed using WSGI servers like Gunicorn
-pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:5050 app:app
+**Backend:**
+```bash
+# Set FLASK_ENV to production
+export FLASK_ENV=production
+python app.py
 ```
 
 ---
@@ -211,192 +223,166 @@ gunicorn -w 4 -b 0.0.0.0:5050 app:app
 smart-transport-system/
 ├── backend/
 │   ├── app.py                          # Flask application entry point
+│   ├── extensions.py                   # Flask extensions initialization
 │   ├── config/
-│   │   └── config.py                  # Configuration management
-│   ├── controllers/                   # Business logic layer
-│   │   ├── auth_controller.py         # Authentication logic
-│   │   ├── driver_controller.py       # Driver management
-│   │   ├── passenger_controller.py    # Passenger management
-│   │   ├── journey_controller.py      # Journey management
-│   │   ├── wallet_controller.py       # Wallet/Payment logic
-│   │   ├── dashboard_controller.py    # User dashboard
-│   │   ├── admin_dashboard_controller.py  # Admin analytics
-│   │   └── face_controller.py         # Facial recognition
-│   ├── routes/                        # API route definitions
-│   ├── middleware/
-│   │   └── auth.py                   # Authentication middleware
-│   ├── ml/                            # Machine learning modules
-│   │   ├── face_encode.py            # Face encoding
-│   │   └── face_verify.py            # Face verification
+│   │   └── config.py                   # Configuration settings
+│   ├── controllers/                    # Business logic layer
+│   │   ├── auth_controller.py
+│   │   ├── face_controller.py          # Facial recognition logic
+│   │   ├── journey_controller.py
+│   │   ├── driver_controller.py
+│   │   ├── passenger_controller.py
+│   │   ├── wallet_controller.py
+│   │   ├── dashboard_controller.py
+│   │   └── admin_dashboard_controller.py
+│   ├── routes/                         # API endpoints
 │   ├── db/
-│   │   └── database.py               # Database connection
-│   └── utils/
-│       └── ml_runner.py              # ML utility functions
-│
-└── frontend/
-    ├── src/
-    │   ├── App.jsx                    # Root component
-    │   ├── main.jsx                   # Entry point
-    │   ├── pages/                     # Page components
-    │   │   ├── Home.jsx
-    │   │   ├── Login.jsx
-    │   │   ├── FaceLogin.jsx
-    │   │   ├── Register.jsx
-    │   │   ├── DriverDashboard.jsx
-    │   │   ├── passenger.jsx
-    │   │   ├── passengerBus.jsx
-    │   │   └── dashboard.tsx
-    │   ├── admin/                     # Admin portal
-    │   │   ├── pages/                 # Admin pages
-    │   │   ├── components/            # Reusable UI components
-    │   │   ├── layout/                # Admin layout
-    │   │   └── api/                   # Admin API calls
-    │   ├── components/                # Shared components
-    │   └── assets/                    # Static assets
-    ├── package.json                   # Frontend dependencies
-    ├── vite.config.js                 # Vite configuration
-    └── eslint.config.js               # Linting configuration
+│   │   └── database.py                 # Database models and connections
+│   ├── middleware/
+│   │   └── auth.py                     # Authentication middleware
+│   ├── ml/                             # Machine Learning modules
+│   │   ├── face_encode.py              # Facial encoding
+│   │   └── face_verify.py              # Facial verification
+│   └── utils/                          # Utility functions
+│       ├── email_otp_service.py        # Email OTP handling
+│       └── ml_runner.py                # ML integration
+
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx                     # Main application component
+│   │   ├── main.jsx                    # Entry point
+│   │   ├── admin/                      # Admin dashboard
+│   │   │   ├── pages/
+│   │   │   ├── components/
+│   │   │   └── layout/
+│   │   ├── pages/                      # User pages
+│   │   │   ├── Login.jsx
+│   │   │   ├── Register.jsx
+│   │   │   ├── Home.jsx
+│   │   │   ├── DriverDashboard.jsx
+│   │   │   ├── FaceLogin.jsx
+│   │   │   └── passenger.jsx
+│   │   ├── components/                 # Reusable components
+│   │   └── assets/                     # Images and static files
+│   ├── package.json
+│   ├── vite.config.js
+│   └── index.html
+
+└── README.md
 ```
 
 ---
 
-## 🔌 API Endpoints Overview
+## 🔌 API Endpoints
 
-### Authentication
-- `POST /auth/register` - User registration
-- `POST /auth/login` - User login
-- `POST /auth/verify-face` - Facial recognition login
-- `POST /auth/logout` - User logout
+### Authentication Routes
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `POST /api/auth/verify-otp` - OTP verification
+- `POST /api/face/login` - Facial recognition login
 
-### Journeys
-- `GET /api/journeys` - List all journeys
-- `POST /api/journeys` - Create new journey
+### Journey Routes
+- `GET /api/journeys` - Get all journeys
+- `POST /api/journeys/create` - Create new journey
 - `GET /api/journeys/<id>` - Get journey details
 - `PUT /api/journeys/<id>` - Update journey
 
-### Passengers
-- `GET /api/passengers/profile` - Get passenger profile
-- `GET /api/passengers/bookings` - List user bookings
+### Passenger Routes
+- `GET /api/passengers/<id>` - Get passenger profile
 - `POST /api/passengers/book` - Book a journey
+- `GET /api/passengers/<id>/bookings` - Get passenger bookings
 
-### Drivers
-- `GET /api/drivers/dashboard` - Driver dashboard data
-- `GET /api/drivers/trips` - List driver trips
+### Driver Routes
+- `GET /api/drivers/<id>` - Get driver profile
+- `GET /api/drivers/<id>/journeys` - Get driver's journeys
 
-### Wallet
-- `GET /api/wallet/balance` - Get wallet balance
-- `POST /api/wallet/topup` - Top-up wallet
-- `GET /api/wallet/transactions` - Transaction history
+### Wallet Routes
+- `GET /api/wallet/<user_id>` - Get wallet balance
+- `POST /api/wallet/transaction` - Create transaction
+- `GET /api/wallet/<user_id>/history` - Get transaction history
 
-### Admin Dashboard
-- `GET /admin/dashboard` - System overview
-- `GET /admin/users` - User management
-- `GET /admin/journeys` - Journey management
-- `GET /admin/transactions` - Transaction reports
+### Dashboard Routes
+- `GET /api/dashboard/analytics` - Get analytics data
+- `GET /api/admin/dashboard/stats` - Get admin statistics
 
 ---
 
 ## 🔐 Security Features
 
 - **JWT Authentication**: Secure token-based authentication
-- **Facial Recognition**: Multi-factor biometric security
+- **OTP Verification**: Email-based one-time password for account verification
+- **Facial Recognition**: AI-powered biometric authentication
+- **Role-Based Access Control (RBAC)**: Different permission levels for users, drivers, and admins
 - **CORS Protection**: Restricted cross-origin requests
-- **Environment Variables**: Sensitive data management
-- **Password Hashing**: Secure password storage (bcrypt)
-- **SQL Injection Prevention**: Parameterized queries
+- **Password Hashing**: Secure password storage
 
 ---
 
-## 📊 Database Schema
+## 🧪 Testing
 
-The system uses PostgreSQL with the following main entities:
-- **Users** - System users (passengers, drivers, admins)
-- **Journeys** - Transport routes and schedules
-- **Bookings** - User journey bookings
-- **Transactions** - Payment records
-- **Wallets** - User digital wallets
-- **Drivers** - Driver profiles and statistics
-- **Buses** - Vehicle information
-
----
-
-## 🤖 Machine Learning Integration
-
-### Face Recognition Features
-- **Face Encoding** - Converts facial images to numerical vectors
-- **Face Verification** - Validates faces against stored encodings
-- **Real-time Processing** - Fast inference for authentication
-
-The ML module uses industry-standard libraries for reliable facial recognition.
-
----
-
-## 📱 Supported Browsers
-
-- Chrome/Chromium (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-
----
-
-## 🚀 Deployment
-
-### Heroku
 ```bash
-# Create Procfile
-echo "web: gunicorn -w 4 -b 0.0.0.0:\$PORT app:app" > Procfile
-heroku create your-app-name
-git push heroku main
-```
-
-### Docker
-```bash
-docker build -t smart-transport .
-docker run -p 5050:5050 smart-transport
-```
-
-### AWS/GCP/Azure
-See individual cloud provider documentation for Flask and React deployment.
-
----
-
-## 🛠️ Development
-
-### Running Tests
-```bash
-# Backend tests
-cd backend
-pytest
-
-# Frontend tests
-cd frontend
-npm run test
-```
-
-### Code Quality
-```bash
-# Linting
+# Frontend linting
 cd frontend
 npm run lint
 
-# Backend linting
-cd backend
-flake8 .
+# Run tests (if configured)
+npm test
 ```
 
 ---
 
-## 📝 Environment Variables Guide
+## 🤝 Contributing
 
-| Variable | Purpose | Example |
-|----------|---------|---------|
-| `SECRET_KEY` | Flask session key | `your-secret-key` |
-| `DB_HOST` | Database host | `localhost` |
-| `DB_NAME` | Database name | `smart_transport` |
-| `DB_USER` | Database user | `postgres` |
-| `DB_PASSWORD` | Database password | `your-password` |
-| `CORS_ORIGIN` | Frontend origin | `http://localhost:5173` |
-| `FLASK_ENV` | Environment type | `development` or `production` |
+Contributions are welcome! Please follow these guidelines:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+### Code Style
+- Follow PEP 8 for Python code
+- Use ESLint for JavaScript/React code
+- Add meaningful commit messages
 
 ---
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+## 👥 Authors
+
+**AI Transit Development Team**
+
+---
+
+## 📧 Support
+
+For support, email support@aitransit.com or open an issue in the repository.
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Mobile app for iOS/Android
+- [ ] Real-time bus location tracking on map
+- [ ] Advanced analytics and reporting
+- [ ] Multi-language support
+- [ ] Integration with payment gateways
+- [ ] AI-based route optimization
+- [ ] Carbon footprint tracking
+- [ ] Community features and ratings
+
+---
+
+<div align="center">
+
+**Made with ❤️ for Smart Cities**
+
+⭐ If you found this helpful, please consider giving it a star!
+
+</div>
