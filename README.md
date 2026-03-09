@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![AI Transit Logo](./frontend/src/assets/logo.png)
+![AI Transit Logo](./frontend/public/logo.png)
 
 **A comprehensive AI-powered smart city transportation platform with facial recognition, real-time journey tracking, and secure wallet management.**
 
